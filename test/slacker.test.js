@@ -4,13 +4,15 @@ import { logger } from '../src/slacker.mjs'
 
 cenv.env(process.env.NODE_ENV)
 
+const goLive = process.env.GO_LIVE && process.env.GO_LIVE === 'true'
+
 describe('Test twitch functionality', () => {
   it('Ensure required environment variables exist', () => {
     expect(process.env.SLACK_HOOK).toBeDefined()
-    expect(process.env.SLACK_HOOK).not.toBe('')
+    if (goLive) { expect(process.env.SLACK_HOOK).not.toBe('') }
   })
 
-  if (process.env.GO_LIVE && process.env.GO_LIVE === 'true') {
+  if (goLive) {
     it('Test a basic info message', async () => {
       return logger.info('Test: info message')
         .then(() => logger.warn('Test: warn message'))
