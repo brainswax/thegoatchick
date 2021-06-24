@@ -4,7 +4,7 @@
   "description": "watch twitch chat and do stuff",
   "scripts": {
     "lint": "standard",
-    "test": "standard && jest",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules standard && jest",
     "start": "node -r esm src/main.js"
   },
   "repository": {
