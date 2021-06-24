@@ -1,18 +1,17 @@
 {
   "name": "thegoatchick",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "watch twitch chat and do stuff",
-  "main": "src/goats.js",
   "scripts": {
     "lint": "standard",
-    "test": "standard && jest",
-    "start": "node -r esm src/goats.js"
+    "test": "standard && cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "start": "node -r esm --experimental-vm-modules src/goats.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brainswax/thegoatchick.git"
   },
-  "author": "",
+  "author": "brainswax",
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/brainswax/thegoatchick/issues"
@@ -24,6 +23,7 @@
     "esm": "^3.2.25",
     "fili": "^2.0.3",
     "jest": "^27.0.5",
+    "nodemon": "^2.0.7",
     "obs-websocket-js": "^3.1.0",
     "onvif": "^0.6.0",
     "redis": "^2.8.0",

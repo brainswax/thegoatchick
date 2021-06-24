@@ -1,7 +1,7 @@
 import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
-import OBSView from 'obs-view.js'
-import PTZ from 'ptz.js'
+import OBSView from './obs-view.js'
+import PTZ from './ptz.js'
 import * as cenv from 'custom-env'
 
 cenv.env(process.env.NODE_ENV)
