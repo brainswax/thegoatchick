@@ -62,7 +62,7 @@ function formatDebug (log) {
 
 // Send a message to slack
 async function notify (msg) {
-  if (typeof (msg) !== 'undefined' && typeof (process.env.SLACK_HOOK) !== 'undefined') {
+  if (typeof (msg) !== 'undefined' && process.env.SLACK_HOOK) {
     return axios.post(process.env.SLACK_HOOK, msg)
       .catch(err => console.error(`Error: slacker.notify unable to log message: ${msg}: ${err}`))
   }
