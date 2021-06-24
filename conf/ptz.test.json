@@ -1,0 +1,22 @@
+{
+  "cams": {
+     "mountains": {
+       "hostname": "localhost",
+       "username": "ptzusername",
+       "password": "ptzpassword",
+       "version": 2
+     },
+     "ocean": {
+       "hostname": "localhost",
+       "username": "ptzusername",
+       "password": "ptzpassword",
+       "version": 2
+     },
+     "desert": {
+       "hostname": "localhost",
+       "username": "ptzusername",
+       "password": "ptzpassword",
+       "version": 2
+     }
+  }
+}
