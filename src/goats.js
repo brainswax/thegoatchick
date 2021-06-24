@@ -6,10 +6,24 @@ import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 
 cenv.env(process.env.NODE_ENV)
+const twitchChannel = process.env.TWITCH_CHANNEL
+const app = {}
+app.exited = false
 
-const twitchChannel = process.env.TWITCH_CHANNEL;
+;(async () => {
+  // ///////////////////////////////////////////////////////////////////////////
+  // Setup general application behavior and logging
+  process.on('beforeExit', (code) => {
+    if (!app.exited) { app.exited = true; logger.info(`== about to exit with code: ${code}`) }
+  })
+  process.on('exit', (code) => { console.info(`== exiting with code: ${code}`) })
 
-(async () => {
+  import('../package.json')
+    .then(pkg => { logger.info(`== starting ${pkg.default.name}@${pkg.default.version}`) })
+    .catch(e => { console.error(`Unable to open package information: ${e}`) })
+
+  // ///////////////////////////////////////////////////////////////////////////
+  // Connect to OBS
   const obs = new OBSWebSocket()
 
   // Connect to OBS

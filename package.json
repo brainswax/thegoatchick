@@ -1,11 +1,11 @@
 {
   "name": "thegoatchick",
-  "version": "1.0.1",
+  "version": "1.0.1-dev1",
   "description": "watch twitch chat and do stuff",
   "scripts": {
     "lint": "standard",
     "test": "standard && cross-env NODE_OPTIONS=--experimental-vm-modules jest",
-    "start": "node -r esm --experimental-vm-modules src/goats.js"
+    "start": "node -r esm --experimental-vm-modules src/main.js"
   },
   "repository": {
     "type": "git",
