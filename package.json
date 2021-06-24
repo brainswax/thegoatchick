@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/brainswax/thegoatchick#readme",
   "dependencies": {
+    "axios": "^0.21.1",
     "cross-env": "^7.0.3",
     "custom-env": "^2.0.1",
     "esm": "^3.2.25",
