@@ -2,11 +2,10 @@
   "name": "thegoatchick",
   "version": "1.0.0",
   "description": "watch twitch chat and do stuff",
-  "main": "src/goats.js",
   "scripts": {
     "lint": "standard",
     "test": "standard && jest",
-    "start": "node -r esm src/goats.js"
+    "start": "node -r esm src/main.js"
   },
   "repository": {
     "type": "git",
