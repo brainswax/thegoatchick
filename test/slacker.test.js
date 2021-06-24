@@ -8,9 +8,12 @@ const goLive = process.env.GO_LIVE && process.env.GO_LIVE === 'true'
 
 describe('Test twitch functionality', () => {
   it('Ensure required environment variables exist', () => {
-    expect(process.env.SLACK_HOOK).toBeDefined()
-    if (goLive) { expect(process.env.SLACK_HOOK).not.toBe('') }
-    else { expect(process.env.SLACK_HOOK).not.toBe('') }
+    if (goLive) {
+      expect(process.env.SLACK_HOOK).toBeDefined()
+      expect(process.env.SLACK_HOOK).not.toBe('')
+    } else if (process.env.SLACK_HOOK) {
+      expect(process.env.SLACK_HOOK).toBe('')
+    }
   })
 
   if (goLive) {
