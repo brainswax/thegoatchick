@@ -10,6 +10,7 @@ describe('Test twitch functionality', () => {
   it('Ensure required environment variables exist', () => {
     expect(process.env.SLACK_HOOK).toBeDefined()
     if (goLive) { expect(process.env.SLACK_HOOK).not.toBe('') }
+    else { expect(process.env.SLACK_HOOK).not.toBe('') }
   })
 
   if (goLive) {
