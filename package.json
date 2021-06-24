@@ -1,22 +1,23 @@
 {
-  "name": "twitch-control",
+  "name": "thegoatchick",
   "version": "1.0.0",
   "description": "watch twitch chat and do stuff",
-  "main": "index.js",
+  "main": "src/goats.js",
   "scripts": {
+    "lint": "standard",
     "test": "standard && jest",
     "start": "node -r esm src/goats.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/spencerlambert/twitch-control.git"
+    "url": "git+https://github.com/brainswax/thegoatchick.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/spencerlambert/twitch-control/issues"
+    "url": "https://github.com/brainswax/thegoatchick/issues"
   },
-  "homepage": "https://github.com/spencerlambert/twitch-control#readme",
+  "homepage": "https://github.com/brainswax/thegoatchick#readme",
   "dependencies": {
     "cross-env": "^7.0.3",
     "custom-env": "^2.0.1",
