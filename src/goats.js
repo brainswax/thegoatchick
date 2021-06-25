@@ -67,7 +67,8 @@ app.exited = false
   }
 
   // Load the PTZ cameras
-  const cams = await getPTZCams(process.env.PTZ_CONFIG)
+  const cams = getPTZCams(process.env.PTZ_CONFIG)
+    .then((cams) => { logger.info('== loaded PTZ cameras'); return cams })
     .catch(err => logger.err(`Error getting PTZ cams: ${err}`))
 
   // twitch IRC options
