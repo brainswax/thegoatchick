@@ -1,6 +1,6 @@
 import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
-import OBSView from './obs-view.mjs'
+import OBSView from './obs-view.js'
 import PTZ from './ptz.js'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
@@ -58,6 +58,7 @@ app.exited = false
         const c = new Map()
         // This assumes that the camera options are under the "cams" entry in the JSON file
         for (const [key, value] of Object.entries(conf.default.cams)) {
+          value.name = key
           c.set(key, new PTZ(value))
         }
 
@@ -67,9 +68,9 @@ app.exited = false
   }
 
   // Load the PTZ cameras
-  const cams = getPTZCams(process.env.PTZ_CONFIG)
+  const cams = await getPTZCams(process.env.PTZ_CONFIG)
     .then((cams) => { logger.info('== loaded PTZ cameras'); return cams })
-    .catch(err => logger.err(`Error getting PTZ cams: ${err}`))
+    .catch(err => logger.error(`Unable to get PTZ cams: ${err}`))
 
   // twitch IRC options
   // CHANGE ME: set OAUTH key
@@ -127,6 +128,7 @@ app.exited = false
     if (matches == null) return
 
     if (obsView.cameraTimeout(context.username)) return
+
     matches.forEach(match => {
       switch (match) {
         // SUBSCRIBER COMMANDS
