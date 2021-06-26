@@ -1,4 +1,18 @@
-import { Cam } from 'onvif'
+class Cam {
+  constructor (options, cb) {
+    this.options = new Map(Object.entries(options))
+    this.moves = []
+  }
+
+  absoluteMove (coords) {
+    console.info(`Move x: ${coords.x}, y: ${coords.y}, zoom: ${coords.zoom}`)
+    this.moves.push(coords)
+  }
+
+  getStatus (o, cb) {
+    console.info(`getStatus: ${this.options.get('hostname')}: ${o}`)
+  }
+}
 
 export default class PTZ {
   constructor (options) {
@@ -11,20 +25,14 @@ export default class PTZ {
       password: options.password
     }, err => {
       if (err) {
-        console.log(err)
-        console.log('Failed to connect to camera: ' + this.name)
+        console.log(`Failed to connect to camera '${this.name}': ${err}`)
       } else {
-        console.log('Connected to camera: ' + this.name)
-        // this.move(this.data.coords)
+        console.log(`Connected to camera: ${this.name}`)
       }
     })
 
     this.data = {
-      coords: {
-        pan: 240,
-        tilt: 20,
-        zoom: 50
-      },
+      coords: { pan: 240, tilt: 20, zoom: 50 },
       shortcuts: {}
     }
 
