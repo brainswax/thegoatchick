@@ -81,13 +81,13 @@ logger.error = async log => {
 
 // Send a warning message to slack
 logger.warn = async log => {
-  console.warn(`Warning: ${log}`)
+  console.warn(`Warn:  ${log}`)
   return notify(formatWarn(log))
 }
 
 // Send an information message to slack
 logger.info = async log => {
-  console.info(`Info: ${log}`)
+  console.info(`Info:  ${log}`)
   return notify(formatInfo(log)).catch(err => console.error(`Error: logger.info: { ${err}, ${log} }`))
 }
 
