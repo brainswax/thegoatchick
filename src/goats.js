@@ -17,6 +17,12 @@ app.exited = false
   process.on('beforeExit', (code) => {
     if (!app.exited) { app.exited = true; logger.info(`== about to exit with code: ${code}`) }
   })
+  process.on('uncaughtException', (err, origin) => {
+    logger.error(`${origin}: ${err}`)
+  })
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error(`Venice broke her promise to Jerry...\n\tPromise: ${promise}\n\tReason: ${reason}`)
+  })
   process.on('exit', (code) => { console.info(`== exiting with code: ${code}`) })
 
   import('../package.json')
