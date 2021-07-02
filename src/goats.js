@@ -89,6 +89,7 @@ app.exited = false
       password: process.env.TWITCH_TOKEN
     },
     connection: { reconnect: true },
+    maxReconnectAttempts: 2888, // Try for 24-hours
     channels: [twitchChannel]
   }
 
@@ -123,7 +124,7 @@ app.exited = false
   // Called every time the bot disconnects from Twitch:
   // TODO: reconnect rather than exit
   function onDisconnectedHandler (reason) {
-    logger.info(`Disconnected and exiting: ${reason}`)
+    logger.info(`Disconnected and exiting: ${JSON.stringify(reason, null, prettySpace)}`)
     process.exit(1)
   }
 
