@@ -5,16 +5,17 @@ export default class PTZ {
     this.name = options.name
     this.version = options.version || 1
 
+    this.logger = options.logger ? options.logger : console
+
     this.cam = new Cam({
       hostname: options.hostname,
       username: options.username,
       password: options.password
     }, err => {
       if (err) {
-        console.log(err)
-        console.log('Failed to connect to camera: ' + this.name)
+        logger.error(`Failed to connect to camera '${this.name}': ${err}`)
       } else {
-        console.log('Connected to camera: ' + this.name)
+        logger.info(`Connected to camera: ${this.name}`)
         // this.move(this.data.coords)
       }
     })
@@ -102,7 +103,7 @@ export default class PTZ {
 
   status () {
     this.cam.getStatus({}, (err, res) => {
-      if (err) console.error(`Error getting camera status for '${this.name}': ${err}`)
+      if (err) logger.error(`Error getting camera status for '${this.name}': ${err}`)
       else console.log(JSON.stringify(res, null, 2))
     })
   }
