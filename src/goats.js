@@ -7,6 +7,7 @@ import * as cenv from 'custom-env'
 
 cenv.env(process.env.NODE_ENV)
 const twitchChannel = process.env.TWITCH_CHANNEL
+const prettySpace = '    ' // Used for formatting JSON in logs
 const app = {}
 app.exited = false
 
@@ -28,8 +29,10 @@ app.exited = false
 
   // Connect to OBS
   obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
-    .then(() => logger.info('OBS connected'))
-    .catch(err => logger.error(`OBS connection failed: ${err}`))
+    .then(() => logger.info('== connected to OBS'))
+    .catch(err => {
+      logger.error(`OBS connection failed: ${JSON.stringify(err, null, prettySpace)}`)
+    })
 
   // Set up OBS window changer
   const obsView = new OBSView(obs)
@@ -64,7 +67,7 @@ app.exited = false
 
         return c
       })
-      .catch(e => { logger.error(`import error: ${e}`) })
+      .catch(e => { logger.error(`import error of ${configFile}: ${e}`) })
   }
 
   // Load the PTZ cameras
@@ -93,8 +96,8 @@ app.exited = false
 
   // Connect to Twitch:
   chat.connect()
-    .then(() => logger.info(`Connected to twitch: ${twitchChannel}`))
-    .catch(err => logger.error(`Unable to connect to twitch: ${err}`))
+    .then(() => logger.info(`== connected to twitch channel: ${process.env.TWITCH_USER}@${twitchChannel}`))
+    .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, prettySpace)}`))
 
   function onCheerHandler (target, context, msg) {
     obsView.processChat(msg)
@@ -102,12 +105,13 @@ app.exited = false
 
   function onChatHandler (target, context, msg) {
     if (context['display-name'] === 'HerdBoss') return // ignore the bot
+    // logger.debug(`User context: ${JSON.stringify(context, null, prettySpace)}`)
     chatBot(msg, context)
   }
 
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
-    logger.info(`* Connected to ${addr}:${port}`)
+    logger.info(`== Connected to twitch server: ${addr}:${port}`)
   }
 
   // Called every time the bot disconnects from Twitch:
@@ -134,42 +138,42 @@ app.exited = false
         // SUBSCRIBER COMMANDS
         case '!cam':
         case '!camera':
-          if (!context.subscriber) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
           obsView.processChat(str)
           return
         case '!treat':
-          if (!context.subscriber) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
           cams.get('treat').command(str)
           return
         case '!does':
-          if (!context.subscriber) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
           cams.get('does').command(str)
           return
         case '!yard':
-          if (!context.subscriber) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
           cams.get('yard').command(str)
           return
         case '!kids':
-          if (!context.subscriber) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
           cams.get('kids').command(str)
           return
         case '!pasture':
-          if (!context.subscriber) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
