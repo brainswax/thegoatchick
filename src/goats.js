@@ -100,6 +100,7 @@ app.exited = false
   chat.on('chat', onChatHandler)
   chat.on('connected', onConnectedHandler)
   chat.on('disconnected', onDisconnectedHandler)
+  chat.on('reconnect', () => { console.info(`${new Date().toISOString()}: reconnecting to twitch`) })
 
   // Connect to Twitch:
   chat.connect()
@@ -115,7 +116,6 @@ app.exited = false
     // logger.debug(`User context: ${JSON.stringify(context, null, prettySpace)}`)
     chatBot(msg, context)
   }
-
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
     logger.info(`== Connected to twitch server: ${addr}:${port}`)
