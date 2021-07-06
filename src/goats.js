@@ -52,7 +52,6 @@ app.exited = false
   obsView.addView('KiddingB', ['kiddingb'])
   obsView.addView('Yard', ['yard'])
   obsView.addView('Treat', ['treat'])
-  obsView.addView('Buckpen', ['buckpen'])
   obsView.addView('Loft', ['loft'])
   obsView.addView('Pasture', ['pasture'])
 
