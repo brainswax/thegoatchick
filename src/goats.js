@@ -21,7 +21,7 @@ app.exited = false
     logger.error(`${origin}: ${err}`)
   })
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error(`Venice broke her promise to Jerry...\n\tPromise: ${promise}\n\tReason: ${reason}`)
+    logger.error(`Venice broke her promise to Jerry...\nPromise: ${promise}\nReason: ${JSON.stringify(reason, null, prettySpace)}`)
   })
   process.on('exit', (code) => { console.info(`== exiting with code: ${code}`) })
 
