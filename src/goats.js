@@ -21,7 +21,7 @@ app.exited = false
     logger.error(`${origin}: ${err}`)
   })
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error(`Venice broke her promise to Jerry...\n\tPromise: ${promise}\n\tReason: ${reason}`)
+    logger.error(`Venice broke her promise to Jerry...\nPromise: ${promise.constructor.valueOf()}\nReason: ${JSON.stringify(reason, null, prettySpace)}`)
   })
   process.on('exit', (code) => { console.info(`== exiting with code: ${code}`) })
 
@@ -52,7 +52,6 @@ app.exited = false
   obsView.addView('KiddingB', ['kiddingb'])
   obsView.addView('Yard', ['yard'])
   obsView.addView('Treat', ['treat'])
-  obsView.addView('Buckpen', ['buckpen'])
   obsView.addView('Loft', ['loft'])
   obsView.addView('Pasture', ['pasture'])
 
@@ -89,6 +88,7 @@ app.exited = false
       password: process.env.TWITCH_TOKEN
     },
     connection: { reconnect: true },
+    maxReconnectAttempts: 2888, // Try for 24-hours
     channels: [twitchChannel]
   }
 
@@ -99,6 +99,7 @@ app.exited = false
   chat.on('chat', onChatHandler)
   chat.on('connected', onConnectedHandler)
   chat.on('disconnected', onDisconnectedHandler)
+  chat.on('reconnect', () => { console.info(`${new Date().toISOString()}: reconnecting to twitch`) })
 
   // Connect to Twitch:
   chat.connect()
@@ -114,7 +115,6 @@ app.exited = false
     // logger.debug(`User context: ${JSON.stringify(context, null, prettySpace)}`)
     chatBot(msg, context)
   }
-
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
     logger.info(`== Connected to twitch server: ${addr}:${port}`)
@@ -123,7 +123,7 @@ app.exited = false
   // Called every time the bot disconnects from Twitch:
   // TODO: reconnect rather than exit
   function onDisconnectedHandler (reason) {
-    logger.info(`Disconnected and exiting: ${reason}`)
+    logger.info(`Disconnected and exiting: ${JSON.stringify(reason, null, prettySpace)}`)
     process.exit(1)
   }
 

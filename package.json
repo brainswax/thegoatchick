@@ -1,6 +1,6 @@
 {
   "name": "thegoatchick",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "watch twitch chat and do stuff",
   "scripts": {
     "lint": "standard",
@@ -28,7 +28,7 @@
     "websocket": "^1.0.29"
   },
   "devDependencies": {
-    "standard": "^16.0.3",
-    "jest": "^27.0.5"
+    "jest": "^27.0.5",
+    "standard": "^16.0.3"
   }
 }
