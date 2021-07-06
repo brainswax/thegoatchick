@@ -20,7 +20,7 @@ function formatError (error) {
     attachments: [{
       title: 'Error',
       color: '#f50057',
-      text: error
+      text: `[${new Date().toISOString()}] ${error}`
     }]
   }
 }
@@ -32,7 +32,7 @@ function formatWarn (log) {
     attachments: [{
       title: 'Warning',
       color: '#ffdd33',
-      text: log
+      text: `[${new Date().toISOString()}] ${log}`
     }]
   }
 }
@@ -43,7 +43,7 @@ function formatInfo (log) {
     mkdwn: true,
     attachments: [{
       color: 'good',
-      text: log
+      text: `[${new Date().toISOString()}] ${log}`
     }]
   }
 };
@@ -55,14 +55,14 @@ function formatDebug (log) {
     attachments: [{
       title: 'Debug',
       color: '#BBBBBB',
-      text: log
+      text: `[${new Date().toISOString()}] ${log}`
     }]
   }
 };
 
 // Send a message to slack
 async function notify (msg) {
-  if (typeof (msg) !== 'undefined' && process.env.SLACK_HOOK && process.env.SLACK_LOG !== 'false') {
+  if (typeof (msg) !== 'undefined' && process.env.SLACK_HOOK && process.env.SLACK_LOG === 'true') {
     return axios.post(process.env.SLACK_HOOK, msg)
       .catch(err => console.error(`Error: slacker.notify unable to log message: ${msg}: ${err}`))
   }
@@ -75,25 +75,25 @@ const logger = {}
 
 // Send an error message to slack
 logger.error = async log => {
-  console.error(`Error: ${log}`)
+  console.error(`[${new Date().toISOString()}] Error: ${log}`)
   return notify(formatError(log))
 }
 
 // Send a warning message to slack
 logger.warn = async log => {
-  console.warn(`Warn:  ${log}`)
+  console.warn(`[${new Date().toISOString()}] Warn:  ${log}`)
   return notify(formatWarn(log))
 }
 
 // Send an information message to slack
 logger.info = async log => {
-  console.info(`Info:  ${log}`)
+  console.info(`[${new Date().toISOString()}] Info:  ${log}`)
   return notify(formatInfo(log)).catch(err => console.error(`Error: logger.info: { ${err}, ${log} }`))
 }
 
 // Send an debug message to slack
 logger.debug = async log => {
-  console.debug(`Debug: ${log}`)
+  console.debug(`[${new Date().toISOString()}] Debug: ${log}`)
   return notify(formatDebug(log)).catch(err => console.error(`Error: logger.debug: { ${err}, ${log} }`))
 }
 
