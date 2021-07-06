@@ -99,7 +99,7 @@ app.exited = false
   chat.on('chat', onChatHandler)
   chat.on('connected', onConnectedHandler)
   chat.on('disconnected', onDisconnectedHandler)
-  chat.on('reconnect', () => { console.info(`${new Date().toISOString()}: reconnecting to twitch`) })
+  chat.on('reconnect', () => { console.info(`[${new Date().toISOString()}] Info:  == reconnecting to twitch`) })
 
   // Connect to Twitch:
   chat.connect()
@@ -117,14 +117,13 @@ app.exited = false
   }
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
-    logger.info(`== Connected to twitch server: ${addr}:${port}`)
+    logger.info(`== connected to twitch server: ${addr}:${port}`)
   }
 
   // Called every time the bot disconnects from Twitch:
   // TODO: reconnect rather than exit
   function onDisconnectedHandler (reason) {
-    logger.info(`Disconnected and exiting: ${JSON.stringify(reason, null, prettySpace)}`)
-    process.exit(1)
+    logger.info(`== disconnected from twitch: ${reason}`)
   }
 
   function sayForSubs () {
