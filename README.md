@@ -84,26 +84,86 @@ Which will return information about your token:
 }
 ```
 
+### TWITCH_RECONNECT
+Twitch reconnects are enabled by default unless this is explicitly set to false
+```shell
+TWITCH_RECONNECT=false
+```
+
+### TWITCH_RECONNECT_TRIES
+The number of reconnect attempts to twitch before giving up. By default, it will start after 1 second, then degrade till it attempts every 30 seconds. 2880 attempts is roughly 24 hours.
+
+```shell
+TWITCH_RECONNECT_TRIES=2880
+```
+
 ## PTZ Config
 The PTZ_CONFIG environment variable is used to specify the location of the PTZ cameras config file.
 
-The file is expected to be JSON with the following format:
+The file is expected to be JSON with the following example format:
 
-```JSON
+```json
 {
   "cams": {
-     "cam1": {
+     "Yard": {
        "hostname": "192.168.0.1",
-       "username": "cam1username",
-       "password": "cam1password",
+       "username": "yarduser",
+       "password": "yardpassword",
        "version": 2
      },
-     "cam2": {
+     "Does": {
        "hostname": "192.168.0.2",
-       "username": "cam2username",
-       "password": "cam2password",
+       "username": "doesusername",
+       "password": "doespassword",
        "version": 2
      }
   }
 }
 ```
+
+## OBS Views Config
+The OBS_VIEWS_CONFIG environment variable is used to specify the location of the OBS views config file.
+
+The file is expected to be JSON with the following example format:
+
+```JSON
+{
+  "aliases": {
+    "Runout": ["runout"],
+    "Bucks": ["bucks"],
+    "Does": ["does"],
+    "Kids": ["kids"],
+    "Feeder": ["feeder"],
+    "Parlor": ["parlor"],
+    "KiddingA": ["kiddinga"],
+    "KiddingB": ["kiddingb"],
+    "Yard": ["yard"],
+    "Treat": ["treat"],
+    "Loft": ["loft"],
+    "Pasture": ["pasture"]
+  },
+  "windows": [
+    {
+      "item": "Yard",
+      "position": { "alignment": 5, "x": 0, "y": 169 },
+      "scale": { "x": 0.942187488079071, "y": 0.9417344331741333 },
+      "visible": true
+    },
+    {
+      "item": "Treat",
+      "position": { "alignment": 5, "x": 1241, "y": 46 },
+      "scale": { "x": 0.528124988079071, "y": 0.5284552574157715 },
+      "visible": true
+    },
+    {
+      "item": "Does",
+      "position": { "alignment": 5, "x": 1241, "y": 472 },
+      "scale": { "x": 0.528124988079071, "y": 0.5243902206420898 },
+      "visible": true
+    }
+  ]
+}
+```
+The aliases are names used by the bot (and chat) to specify which camera OBS should show or hide in a particular window.
+
+Each item in the windows array will create a window in OBS and display it to the stream with the specified location and dimensions. Set the "item" field to specify which camera should default in each window.

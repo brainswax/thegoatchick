@@ -15,6 +15,26 @@ app.exited = false
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
 if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { process.env.OBS_VIEWS_CONFIG = '../conf/obs-views.json' }
 
+/**
+Get the PTZ config and connect to the cameras
+@param configFile the name of the JSON config file with the camera options
+@return a promise to a Map of camera names to instances
+*/
+function getPTZCams (configFile) {
+  return import(configFile)
+    .then(conf => {
+      const c = new Map()
+      // This assumes that the camera options are under the "cams" entry in the JSON file
+      for (const [key, value] of Object.entries(conf.default.cams)) {
+        value.name = key
+        c.set(key, new PTZ(value))
+      }
+
+      return c
+    })
+    .catch(e => { logger.error(`import error of ${configFile}: ${e}`) })
+}
+
 ;(async () => {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
@@ -51,45 +71,23 @@ if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { proc
     logger: logger
   })
 
-  /**
-  Get the PTZ config and connect to the cameras
-  @param configFile the name of the JSON config file with the camera options
-  @return a promise to a Map of camera names to instances
-  */
-  function getPTZCams (configFile) {
-    return import(configFile)
-      .then(conf => {
-        const c = new Map()
-        // This assumes that the camera options are under the "cams" entry in the JSON file
-        for (const [key, value] of Object.entries(conf.default.cams)) {
-          value.name = key
-          c.set(key, new PTZ(value))
-        }
-
-        return c
-      })
-      .catch(e => { logger.error(`import error of ${configFile}: ${e}`) })
-  }
-
+  // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
   const cams = await getPTZCams(process.env.PTZ_CONFIG)
     .then((cams) => { logger.info('== loaded PTZ cameras'); return cams })
     .catch(err => logger.error(`Unable to get PTZ cams: ${err}`))
 
-  // twitch IRC options
-  // CHANGE ME: set OAUTH key
-  const opts = {
+  // ///////////////////////////////////////////////////////////////////////////
+  // Connect to twitch
+  const chat = new tmi.Client({
     identity: {
       username: process.env.TWITCH_USER,
       password: process.env.TWITCH_TOKEN
     },
-    connection: { reconnect: true },
-    maxReconnectAttempts: 2888, // Try for 24-hours
+    connection: { reconnect: process.env.TWITCH_RECONNECT !== 'false' },
+    maxReconnectAttempts: process.env.TWITCH_RECONNECT_TRIES,
     channels: [twitchChannel]
-  }
-
-  // Create a client with our options:
-  const chat = new tmi.Client(opts)
+  })
 
   chat.on('cheer', onCheerHandler)
   chat.on('chat', onChatHandler)
