@@ -10,7 +10,6 @@ export default class OBSView {
     this.logger = options.logger ? options.logger : console
 
     if (options.config) {
-      console.debug(`Loading OBS views config '${options.config}'`)
       import(options.config)
         .then(views => {
           this.obsWindows = views.default.windows
