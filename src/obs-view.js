@@ -30,7 +30,10 @@ export default class OBSView {
     let first = true
     let n = 0
 
-    const words = msg.split(/[\s]+/) // split on whitespace
+    const words = msg.replace(/[\s]+[\d]+[\s]+[\S]+/g, (s) => { // find instance like: !cam 1 treat
+      return ' ' + s.replace(/[\s]+/g, '') // remove the extraneous space: 1treat
+    }).split(/[\s]+/) // split on whitespace
+
     words.forEach(word => {
       if (first) { first = false; return } // ignore the !cam at the beginning
 
@@ -39,7 +42,7 @@ export default class OBSView {
       if (this.aliases.has(camName)) { // Only add a commmand if there are aliases for the camera name
         const camIndex = i === 0 ? 0 : parseInt(word.slice(0, i)) // Assume 0 unless it starts with a number
         if (camIndex < this.obsWindows.length) { // Only add it if there's a camera window available
-          commands[n++] = { index: camIndex, name: camName } // Add the command to the array
+          commands[n++] = { index: camIndex, name: this.aliases.get(camName) } // Add the command to the array
         }
       }
     })
@@ -52,7 +55,7 @@ export default class OBSView {
   @param msg the chat message to process
   */
   processChat (msg) {
-    this.parseChatCommands(msg).forEach(c => { this.setWindow(c.index, this.aliases.get(c.name)) })
+    this.parseChatCommands(msg).forEach(c => { this.setWindow(c.index, c.name) })
     this.updateOBS()
   }
 
