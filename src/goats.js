@@ -45,16 +45,11 @@ if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { proc
     })
 
   // Set up OBS window changer
-  const obsView = new OBSView(obs)
-
-  import(process.env.OBS_VIEWS_CONFIG)
-    .then(views => {
-      logger.info('== loaded OBS view aliases')
-      obsView.addAliases(views.default.aliases)
-    })
-    .catch(err => {
-      logger.error(`Unable to load OBS aliases: ${JSON.stringify(err, null, prettySpace)}`)
-    })
+  const obsView = new OBSView({
+    config: process.env.OBS_VIEWS_CONFIG,
+    obs: obs,
+    logger: logger
+  })
 
   /**
   Get the PTZ config and connect to the cameras

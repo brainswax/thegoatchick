@@ -1,28 +1,26 @@
+const prettySpace = '  '
+
 export default class OBSView {
-  constructor (obs) {
-    this.obs = obs
-
-    this.obsWindows = [
-      {
-        item: 'one',
-        position: { alignment: 5, x: 0, y: 169 },
-        scale: { x: 0.942187488079071, y: 0.9417344331741333 },
-        visible: true
-      }, {
-        item: 'two',
-        position: { alignment: 5, x: 1241, y: 46 },
-        scale: { x: 0.528124988079071, y: 0.5284552574157715 },
-        visible: true
-      }, {
-        item: 'three',
-        position: { alignment: 5, x: 1241, y: 472 },
-        scale: { x: 0.528124988079071, y: 0.5243902206420898 },
-        visible: true
-      }]
-
+  constructor (options) {
     // A map of aliases to camera names
     this.aliases = new Map()
     this.changed = new Set()
+
+    this.obs = options.obs
+    this.logger = options.logger ? options.logger : console
+
+    if (options.config) {
+      console.debug(`Loading OBS views config '${options.config}'`)
+      import(options.config)
+        .then(views => {
+          this.obsWindows = views.default.windows
+          this.addAliases(views.default.aliases)
+          this.logger.info('== loaded OBS view config')
+        })
+        .catch(err => {
+          this.logger.error(`Unable to load OBS aliases: ${err}`)
+        })
+    }
   }
 
   /**
