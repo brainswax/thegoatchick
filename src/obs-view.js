@@ -37,7 +37,7 @@ export default class OBSView {
       .split(/[\s]+/) // split on whitespace
 
     words.forEach(word => {
-      const i = word.search(/[\D]/) // Find the first non-digit character
+      const i = word.search(/\D/) // Find the first non-digit character
       const camName = word.slice(i) // get everything including and after the first non-digit character
       if (this.aliases.has(camName)) { // Only add a commmand if there are aliases for the camera name
         const camIndex = i === 0 ? 0 : parseInt(word.slice(0, i)) // Assume 0 unless it starts with a number
