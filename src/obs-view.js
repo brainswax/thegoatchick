@@ -73,7 +73,7 @@ export default class OBSView {
 
   setWindow (index, name) {
     let currentIndex = -1
-    console.debug(`[${new Date().toISOString()}] Debug: setWindow({ index: ${index}, name: ${name} })`)
+    this.logger.debug(`setWindow({ index: ${index}, name: ${name} })`)
 
     // get idex of where the view is currently
     for (let x = 0; x < this.obsWindows.length; x++) {
@@ -100,15 +100,15 @@ export default class OBSView {
   */
   updateOBS () {
     if (this.changed.length === 0) {
-      console.debug(`[${new Date().toISOString()}] Debug: no OBS views were changed`)
+      this.logger.debug('no OBS views were changed')
     } else {
-      console.debug(`[${new Date().toISOString()}] Debug: updating OBS views...\nchanged: ${JSON.stringify(Array.from(this.changed))}\nobsWindows: ${JSON.stringify(this.obsWindows, null, '  ')}`)
+      this.logger.debug(`updating OBS views...\nchanged: ${JSON.stringify(Array.from(this.changed))}\nobsWindows: ${JSON.stringify(this.obsWindows, null, '  ')}`)
     }
 
     this.obsWindows.forEach(view => {
       if (this.changed.has(view.item)) {
         this.obs.send('SetSceneItemProperties', view)
-          .catch(err => { console.error(`[${new Date().toISOString()}] Error: unable to update OBS view '${view.item}': ${JSON.stringify(err, null, '  ')}`) })
+          .catch(err => { this.logger.warn(`unable to update OBS view '${view.item}': ${JSON.stringify(err, null, '  ')}`) })
         this.changed.delete(view.item)
       }
     })
@@ -117,7 +117,7 @@ export default class OBSView {
     this.changed.forEach((cam) => {
       const view = { item: cam, visible: false }
       this.obs.send('SetSceneItemProperties', view)
-        .catch(err => { console.error(`[${new Date().toISOString()}] Error: unable to hide OBS view '${cam}': ${JSON.stringify(err, null, '  ')}`) })
+        .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${JSON.stringify(err, null, '  ')}`) })
     })
 
     this.changed.clear()

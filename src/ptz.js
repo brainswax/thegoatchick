@@ -12,12 +12,8 @@ export default class PTZ {
       username: options.username,
       password: options.password
     }, err => {
-      if (err) {
-        this.logger.error(`Failed to connect to camera '${this.name}': ${err}`)
-      } else {
-        console.info(`[${new Date().toISOString()}] Info: connected to camera: ${this.name}`) // TODO: use logger once log levels are implemeted
-        // this.move(this.data.coords)
-      }
+      if (err) this.logger.warn(`Failed to connect to camera '${this.name}': ${err}`)
+      else this.logger.info(`connected to camera: ${this.name}`)
     })
 
     this.data = {
@@ -103,8 +99,8 @@ export default class PTZ {
 
   status () {
     this.cam.getStatus({}, (err, res) => {
-      if (err) this.logger.error(`Error getting camera status for '${this.name}': ${err}`)
-      else console.info(`[${new Date().toISOString()}] Info: getStatus of '${this.name}': ${JSON.stringify(res, null, '  ')}`) // TODO: use logger once log levels are implemeted
+      if (err) this.logger.warn(`Unable to get camera status for '${this.name}': ${err}`)
+      else this.logger.info(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`) // TODO: use logger once log levels are implemeted
     })
   }
 

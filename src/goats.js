@@ -15,6 +15,10 @@ app.exited = false
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
 if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { process.env.OBS_VIEWS_CONFIG = '../conf/obs-views.json' }
 
+// Grab log levels to console and slack
+logger.level.console = logger[process.env.LOG_LEVEL_CONSOLE] || logger.level.console
+logger.level.slack = logger[process.env.LOG_LEVEL_SLACK] || logger.level.slack
+
 /**
 Get the PTZ config and connect to the cameras
 @param configFile the name of the JSON config file with the camera options
@@ -32,7 +36,7 @@ function getPTZCams (configFile) {
 
       return c
     })
-    .catch(e => { logger.error(`import error of ${configFile}: ${e}`) })
+    .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
 }
 
 ;(async () => {
@@ -45,13 +49,13 @@ function getPTZCams (configFile) {
     logger.error(`${origin}: ${err}`)
   })
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error(`Venice broke her promise to Jerry...\nPromise: ${promise.constructor.valueOf()}\nReason: ${JSON.stringify(reason, null, prettySpace)}`)
+    logger.warn(`Venice broke her promise to Jerry...\nPromise: ${promise.constructor.valueOf()}\nReason: ${JSON.stringify(reason, null, prettySpace)}`)
   })
-  process.on('exit', (code) => { console.info(`== exiting with code: ${code}`) })
+  process.on('exit', (code) => { logger.log(`== exiting with code: ${code}`) })
 
   import('../package.json')
-    .then(pkg => { logger.info(`== starting ${pkg.default.name}@${pkg.default.version}`) })
-    .catch(e => { console.error(`Unable to open package information: ${e}`) })
+    .then(pkg => { logger.log(`== starting ${pkg.default.name}@${pkg.default.version}`) })
+    .catch(e => { logger.error(`Unable to open package information: ${e}`) })
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
@@ -93,7 +97,7 @@ function getPTZCams (configFile) {
   chat.on('chat', onChatHandler)
   chat.on('connected', onConnectedHandler)
   chat.on('disconnected', onDisconnectedHandler)
-  chat.on('reconnect', () => { console.info(`[${new Date().toISOString()}] Info:  == reconnecting to twitch`) })
+  chat.on('reconnect', () => { logger.info('== reconnecting to twitch') })
 
   // Connect to Twitch:
   chat.connect()
@@ -127,7 +131,7 @@ function getPTZCams (configFile) {
   function chatBot (str, context) {
     const wordsRegex = /!(\w+)\b/gm
 
-    console.debug(`[${new Date().toISOString()}] Debug:\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
     const matches = str.toLowerCase().match(wordsRegex)
     if (matches == null || obsView.cameraTimeout(context.username)) return
 

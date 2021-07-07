@@ -97,6 +97,24 @@ The number of reconnect attempts to twitch before giving up. By default, it will
 TWITCH_RECONNECT_TRIES=2880
 ```
 
+### LOG_LEVEL_CONSOLE
+Sets the level of logs sent to the console. The logger will only log at the specified level or higher severity.
+
+From highest to lowest severity: EMERGENCY, ALERT, CRITICAL, ERROR, WARN, NOTICE, INFO, DEBUG
+
+```shell
+LOG_LEVEL_CONSOLE=DEBUG
+```
+
+### LOG_LEVEL_SLACK
+Sets the level of logs sent to Slack (assuming SLACK_LOG=true). The logger will only log at the specified level or higher severity.
+
+From highest to lowest severity: EMERGENCY, ALERT, CRITICAL, ERROR, WARN, NOTICE, INFO, DEBUG
+
+```shell
+LOG_LEVEL_SLACK=ERROR
+```
+
 ## PTZ Config
 The PTZ_CONFIG environment variable is used to specify the location of the PTZ cameras config file.
 
