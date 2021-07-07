@@ -1,5 +1,3 @@
-const prettySpace = '  '
-
 export default class OBSView {
   constructor (options) {
     // A map of aliases to camera names
