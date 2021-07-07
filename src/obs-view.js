@@ -5,7 +5,7 @@ export default class OBSView {
     this.changed = new Set()
 
     this.obs = options.obs
-    this.logger = options.logger ? options.logger : console
+    this.logger = options.logger || console
 
     if (options.config) {
       import(options.config)

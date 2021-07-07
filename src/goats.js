@@ -117,7 +117,7 @@ function getPTZCams (configFile) {
   // Called every time the bot disconnects from Twitch:
   // TODO: reconnect rather than exit
   function onDisconnectedHandler (reason) {
-    logger.info(`== disconnected from twitch: ${reason}`)
+    logger.info(`== disconnected from twitch: ${reason || 'unknown reason'}`)
   }
 
   function sayForSubs () {

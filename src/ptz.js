@@ -5,7 +5,7 @@ export default class PTZ {
     this.name = options.name
     this.version = options.version || 1
 
-    this.logger = options.logger ? options.logger : console
+    this.logger = options.logger || console
 
     this.cam = new Cam({
       hostname: options.hostname,
