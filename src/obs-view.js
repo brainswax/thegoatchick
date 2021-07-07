@@ -30,14 +30,14 @@ export default class OBSView {
     let first = true
     let n = 0
 
-    const words = msg.replace(/[\s]+[\d]+[\s]+[\S]+/g, (s) => { // find instance like: !cam 1 treat
-      return ' ' + s.replace(/[\s]+/g, '') // remove the extraneous space: 1treat
+    const words = msg.replace(/[\s]+[\d]+[\s]+[\D]+/g, (s) => { // find instance like: !cam 1 treat
+      return ' ' + s.replace(/[\s]+/g, '') // remove the extraneous space: !cam 1treat
     }).split(/[\s]+/) // split on whitespace
 
     words.forEach(word => {
       if (first) { first = false; return } // ignore the !cam at the beginning
 
-      const i = word.search(/[A-Za-z_-]/) // Find the first non-digit character
+      const i = word.search(/[\D]/) // Find the first non-digit character
       const camName = word.slice(i) // get everything including and after the first non-digit character
       if (this.aliases.has(camName)) { // Only add a commmand if there are aliases for the camera name
         const camIndex = i === 0 ? 0 : parseInt(word.slice(0, i)) // Assume 0 unless it starts with a number
