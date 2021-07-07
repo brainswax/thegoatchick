@@ -11,6 +11,10 @@ const prettySpace = '    ' // Used for formatting JSON in logs
 const app = {}
 app.exited = false
 
+// Set default config file locations
+if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
+if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { process.env.OBS_VIEWS_CONFIG = '../conf/obs-views.json' }
+
 ;(async () => {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
@@ -42,18 +46,15 @@ app.exited = false
 
   // Set up OBS window changer
   const obsView = new OBSView(obs)
-  obsView.addView('Runout', ['runout'])
-  obsView.addView('Bucks', ['bucks'])
-  obsView.addView('Does', ['does'])
-  obsView.addView('Kids', ['kids'])
-  obsView.addView('Feeder', ['feeder'])
-  obsView.addView('Parlor', ['parlor'])
-  obsView.addView('KiddingA', ['kiddinga'])
-  obsView.addView('KiddingB', ['kiddingb'])
-  obsView.addView('Yard', ['yard'])
-  obsView.addView('Treat', ['treat'])
-  obsView.addView('Loft', ['loft'])
-  obsView.addView('Pasture', ['pasture'])
+
+  import(process.env.OBS_VIEWS_CONFIG)
+    .then(views => {
+      logger.info('== loaded OBS view aliases')
+      obsView.addAliases(views.default.aliases)
+    })
+    .catch(err => {
+      logger.error(`Unable to load OBS aliases: ${JSON.stringify(err, null, prettySpace)}`)
+    })
 
   /**
   Get the PTZ config and connect to the cameras
@@ -133,10 +134,9 @@ app.exited = false
   function chatBot (str, context) {
     const wordsRegex = /!(\w+)\b/gm
 
+    console.debug(`[${new Date().toISOString()}] Debug:\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
     const matches = str.toLowerCase().match(wordsRegex)
-    if (matches == null) return
-
-    if (obsView.cameraTimeout(context.username)) return
+    if (matches == null || obsView.cameraTimeout(context.username)) return
 
     matches.forEach(match => {
       switch (match) {
