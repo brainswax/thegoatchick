@@ -115,7 +115,7 @@ function getPTZCams (configFile) {
   }
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
-    logger.info(`== connected to twitch server: ${addr}:${port}`)
+    logger.log(`== connected to twitch server: ${addr}:${port}`)
   }
 
   // Called every time the bot disconnects from Twitch:
