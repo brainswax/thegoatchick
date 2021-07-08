@@ -33,6 +33,13 @@ async function get (that, sql, params = []) {
   })
 }
 
+/**
+This class is meant to be used to store the state of objects across a restart.
+
+It is a basic key:value (name:object) object store, which uses sqlite3 by default.
+You can store an arbitrary JavaScript object by speficying a name and the object.
+The named Object can then be retrieved later with a fetch.
+*/
 class GoatStore {
   constructor (opts = {}) {
     this.logger = opts.logger || console
