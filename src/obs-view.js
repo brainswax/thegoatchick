@@ -144,6 +144,9 @@ export default class OBSView {
         .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${JSON.stringify(err, null, '  ')}`) })
     })
 
+    if (this.changed.size > 0) { // Something didn't update, let's try again later
+      setTimeout(() => this.updateOBS(), 5000)
+    }
     this.db.store(this.dbkey, this.obsWindows)
   }
 
