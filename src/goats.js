@@ -65,10 +65,11 @@ function getPTZCams (configFile, options = []) {
     .then(pkg => { logger.log(`== starting ${pkg.default.name}@${pkg.default.version}`) })
     .catch(e => { logger.error(`Unable to open package information: ${e}`) })
 
+  // Always show log levels at startup
+  logger.log(`== log levels: { console: ${logger.getLogLevel(logger.level.console)}, slack: ${logger.getLogLevel(logger.level.slack)} }`)
+
   // Open and initialize the sqlite database for storing object states across restarts
   const db = new GoatStore({ logger: logger, file: process.env.DB_FILE })
-  db.init() // creates the database if it doesn't exist
-    .catch(e => logger.warn(`Unable to initialize the database: ${e}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
@@ -145,7 +146,8 @@ function getPTZCams (configFile, options = []) {
   function chatBot (str, context) {
     const wordsRegex = /!(\w+)\b/gm
 
-    logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    if (str.startsWith('!')) logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+
     const matches = str.toLowerCase().match(wordsRegex)
     if (matches == null || obsView.cameraTimeout(context.username)) return
 
