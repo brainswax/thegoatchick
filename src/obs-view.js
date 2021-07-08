@@ -11,7 +11,7 @@ export default class OBSView {
 
     this.db = options.db || new GoatDB({ logger: this.logger })
 
-    this.windowsdb = 'obs.windows'
+    this.windowsdb = 'obs.windows' // A unique key to store the object as
     this.db.init()
       .then(() => this.db.fetch(this.windowsdb))
       .then((data) => {

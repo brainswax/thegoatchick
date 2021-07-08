@@ -55,12 +55,14 @@ function getPTZCams (configFile) {
   })
   process.on('exit', (code) => { logger.log(`== exiting with code: ${code}`) })
 
+  // Grab the version and log it
   import('../package.json')
     .then(pkg => { logger.log(`== starting ${pkg.default.name}@${pkg.default.version}`) })
     .catch(e => { logger.error(`Unable to open package information: ${e}`) })
 
+  // Open and initialize the sqlite database for storing object states across restarts
   const db = new GoatDB({ logger: logger, file: process.env.DB_FILE })
-  db.init()
+  db.init() // creates the database if it doesn't exist
     .catch(e => logger.warn(`Unable to initialize the database: ${e}`))
 
   // ///////////////////////////////////////////////////////////////////////////
