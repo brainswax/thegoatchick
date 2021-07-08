@@ -26,13 +26,14 @@ Get the PTZ config and connect to the cameras
 @param configFile the name of the JSON config file with the camera options
 @return a promise to a Map of camera names to instances
 */
-function getPTZCams (configFile) {
+function getPTZCams (configFile, options = []) {
   return import(configFile)
     .then(conf => {
       const c = new Map()
       // This assumes that the camera options are under the "cams" entry in the JSON file
       for (const [key, value] of Object.entries(conf.default.cams)) {
         value.name = key
+        Object.assign(value, options)
         c.set(key, new PTZ(value))
       }
 
@@ -86,7 +87,7 @@ function getPTZCams (configFile) {
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
-  const cams = await getPTZCams(process.env.PTZ_CONFIG)
+  const cams = await getPTZCams(process.env.PTZ_CONFIG, { logger: logger, db: db })
     .then((cams) => { logger.info('== loaded PTZ cameras'); return cams })
     .catch(err => logger.error(`Unable to get PTZ cams: ${err}`))
 

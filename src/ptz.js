@@ -54,11 +54,20 @@ export default class PTZ {
     this.logger.info(`move PTZ camera '${this.name}': ${JSON.stringify(this.data, null, '  ')}`)
     this.db.store(this.dbkey, this.data) // Persist the current position
       .catch(err => this.logger.warn(`storing data for '${this.dbkey}': ${err}`))
-    this.cam.absoluteMove({
-      x: this.calcPan(coords.pan),
-      y: this.calcTilt(coords.tilt),
-      zoom: this.calcZoom(coords.zoom)
-    })
+
+    try {
+      if (this.cam.activeSources) { // If the camera is connected
+        this.cam.absoluteMove({
+          x: this.calcPan(coords.pan),
+          y: this.calcTilt(coords.tilt),
+          zoom: this.calcZoom(coords.zoom)
+        }, (err) => this.logger.warn(`unable to move camera ${this.name}: ${err}`))
+      } else {
+        this.logger.info(`unable to move offline camera '${this.name}'`)
+      }
+    } catch (err) {
+      this.logger.warn(`Cam.absoluteMove threw an exception moving camera ${this.name}: ${err}`)
+    }
   }
 
   calcPan (pan) {
@@ -111,10 +120,18 @@ export default class PTZ {
   }
 
   status () {
-    this.cam.getStatus({}, (err, res) => {
-      if (err) this.logger.warn(`Unable to get camera status for '${this.name}': ${err}`)
-      else this.logger.info(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`) // TODO: use logger once log levels are implemeted
-    })
+    try {
+      if (this.cam.activeSources) { // If the camera is connected
+        this.cam.getStatus({}, (err, res) => {
+          if (err) this.logger.warn(`Unable to get camera status for '${this.name}': ${err}`)
+          else this.logger.info(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`) // TODO: use logger once log levels are implemeted
+        })
+      } else {
+        this.logger.info(`unable to get status for offline camera '${this.name}'`)
+      }
+    } catch (err) {
+      this.logger.warn(`Cam.getStatus threw an exception getting status for camera ${this.name}: ${err}`)
+    }
   }
 
   command (txt) {
