@@ -130,6 +130,7 @@ export default class OBSView {
     this.obsWindows.forEach(view => {
       if (this.changed.has(view.item)) {
         this.obs.send('SetSceneItemProperties', view)
+          .then(() => this.changed.delete(view.item))
           .catch(err => { this.logger.warn(`unable to update OBS view '${view.item}': ${JSON.stringify(err, null, '  ')}`) })
         this.changed.delete(view.item)
       }
@@ -139,10 +140,10 @@ export default class OBSView {
     this.changed.forEach((cam) => {
       const view = { item: cam, visible: false }
       this.obs.send('SetSceneItemProperties', view)
+        .then(() => this.changed.delete(view.item))
         .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${JSON.stringify(err, null, '  ')}`) })
     })
 
-    this.changed.clear()
     this.db.store(this.dbkey, this.obsWindows)
   }
 
