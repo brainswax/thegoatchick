@@ -9,7 +9,7 @@ export default class OBSView {
     this.obs = options.obs
     this.logger = options.logger || console
 
-    this.db = options.db || new GoatDB()
+    this.db = options.db || new GoatDB({ logger: this.logger })
 
     this.windowsdb = 'obs.windows'
     this.db.init()

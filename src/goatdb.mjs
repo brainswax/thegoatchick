@@ -39,8 +39,6 @@ class GoatDB {
           value BLOB NOT NULL,
           time DATETIME DEFAULT CURRENT_TIMESTAMP)`)
     }
-
-    return new Promise(() => {})
   }
 
   async store (name, object) {

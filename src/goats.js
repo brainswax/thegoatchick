@@ -2,6 +2,7 @@ import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
 import OBSView from './obs-view.js'
 import PTZ from './ptz.js'
+import { GoatDB } from './goatdb.mjs'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 
@@ -14,6 +15,7 @@ app.exited = false
 // Set default config file locations
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
 if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { process.env.OBS_VIEWS_CONFIG = '../conf/obs-views.json' }
+if (!process.env.DB_FILE || process.env.DB_FILE === '') { process.env.DB_FILE = './goatdb.sqlite3' }
 
 // Grab log levels to console and slack
 logger.level.console = logger[process.env.LOG_LEVEL_CONSOLE] || logger.level.console
@@ -57,6 +59,10 @@ function getPTZCams (configFile) {
     .then(pkg => { logger.log(`== starting ${pkg.default.name}@${pkg.default.version}`) })
     .catch(e => { logger.error(`Unable to open package information: ${e}`) })
 
+  const db = new GoatDB({ logger: logger, file: process.env.DB_FILE })
+  db.init()
+    .catch(e => logger.warn(`Unable to initialize the database: ${e}`))
+
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
   const obs = new OBSWebSocket()
@@ -72,6 +78,7 @@ function getPTZCams (configFile) {
   const obsView = new OBSView({
     config: process.env.OBS_VIEWS_CONFIG,
     obs: obs,
+    db: db,
     logger: logger
   })
 
