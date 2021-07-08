@@ -46,7 +46,7 @@ export default class OBSView {
     const commands = []
     let n = 0
 
-    const words = msg
+    const words = msg.toLowerCase()
       .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
       .replace(/[\s]+[\d]+[\s]+[\D]+/g, (s) => { // find instance like: 1 treat
         return ' ' + s.replace(/[\s]+/g, '') // remove the extraneous whitespace: 1treat
