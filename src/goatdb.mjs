@@ -42,11 +42,11 @@ class GoatDB {
   }
 
   async store (name, object) {
-    return run(this, 'INSERT OR REPLACE INTO ostate (name, value) VALUES (?, ?)', [name, JSON.stringify(object)])
+    return this.init().then(() => run(this, 'INSERT OR REPLACE INTO ostate (name, value) VALUES (?, ?)', [name, JSON.stringify(object)]))
   }
 
   async fetch (name) {
-    return get(this, 'SELECT * FROM ostate WHERE name = ?', [name])
+    return this.init().then(() => get(this, 'SELECT * FROM ostate WHERE name = ?', [name]))
   }
 
   async close () {
