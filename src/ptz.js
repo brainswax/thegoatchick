@@ -38,6 +38,9 @@ export default class PTZ {
     this.shortcuts_regex = /\b(\w+)\b/gm
   }
 
+  /**
+  Gets the key for storing this cameras position
+  */
   get dbkey () {
     return `ptz.cam.${this.name}`
   }

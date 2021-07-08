@@ -11,8 +11,7 @@ export default class OBSView {
 
     this.db = options.db || new GoatStore({ logger: this.logger })
 
-    this.windowsdb = 'obs.windows' // A unique key to store the object as
-    this.db.fetch(this.windowsdb)
+    this.db.fetch(this.dbkey)
       .then((data) => {
         // Try to get it from the database first. If not, grab it from config.
         if (data) {
@@ -34,6 +33,13 @@ export default class OBSView {
         }
       })
       .catch(err => this.logger.info(`Unable to retrieve obs views from the database: ${err}`))
+  }
+
+  /**
+  Gets the key for storing windows
+  */
+  get dbkey () {
+    return 'obs.windows'
   }
 
   /**
@@ -137,7 +143,7 @@ export default class OBSView {
     })
 
     this.changed.clear()
-    this.db.store(this.windowsdb, this.obsWindows)
+    this.db.store(this.dbkey, this.obsWindows)
   }
 
   // TODO: implement
