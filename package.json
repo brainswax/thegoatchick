@@ -1,10 +1,10 @@
 {
   "name": "thegoatchick",
-  "version": "1.0.6",
+  "version": "1.1.0-beta",
   "description": "watch twitch chat and do stuff",
   "scripts": {
     "lint": "standard",
-    "test": "standard && cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "standard && cross-env NODE_OPTIONS=--experimental-vm-modules jest --verbose",
     "start": "cross-env NODE_ENV=production node -r esm --experimental-vm-modules src/goats.js"
   },
   "repository": {
@@ -19,11 +19,13 @@
   "homepage": "https://github.com/brainswax/thegoatchick#readme",
   "dependencies": {
     "axios": "^0.21.1",
+    "bluebird": "^3.7.2",
     "cross-env": "^7.0.3",
     "custom-env": "^2.0.1",
     "esm": "^3.2.25",
     "obs-websocket-js": "^3.1.0",
     "onvif": "^0.6.0",
+    "sqlite3": "^5.0.2",
     "tmi.js": "^1.8.3",
     "websocket": "^1.0.29"
   },

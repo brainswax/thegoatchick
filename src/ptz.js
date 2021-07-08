@@ -1,39 +1,48 @@
 import { Cam } from 'onvif'
+import { GoatStore } from './goatstore.mjs'
 
 export default class PTZ {
   constructor (options) {
-    this.name = options.name
+    this.name = options.name || 'unnamed'
     this.version = options.version || 1
 
-    this.logger = options.logger ? options.logger : console
+    this.logger = options.logger || console
+    this.db = options.db || new GoatStore({ logger: this.logger })
 
     this.cam = new Cam({
       hostname: options.hostname,
       username: options.username,
       password: options.password
     }, err => {
-      if (err) {
-        this.logger.error(`Failed to connect to camera '${this.name}': ${err}`)
-      } else {
-        console.info(`Connected to camera: ${this.name}`) // TODO: use logger once log levels are implemeted
-        // this.move(this.data.coords)
-      }
+      if (err) this.logger.warn(`failed to connect to camera '${this.name}': ${err}`)
+      else this.logger.info(`connected to camera: ${this.name}`)
     })
 
-    this.data = {
-      coords: {
-        pan: 240,
-        tilt: 20,
-        zoom: 50
-      },
-      shortcuts: {}
-    }
+    this.db.fetch(this.dbkey)
+      .then(data => {
+        if (data) this.data = data
+        else {
+          this.data = {
+            coords: { pan: 240, tilt: 20, zoom: 50 },
+            shortcuts: {}
+          }
+        }
+        this.logger.info(`Initial PTZ camera position for '${this.name}': ${JSON.stringify(this.data, null, '  ')}`)
+      })
+      .catch(err => this.logger.warn(`Unable to retrieve persisted data for PTZ camera '${this.name}': ${err}`))
 
     this.pan_regex = /\b(p|pan|right|left|r|l) ?(\+|-)? ?([0-9]{1,3})/gm
     this.tilt_regex = /\b(t|tilt|down|up|d|u) ?(\+|-)? ?([0-9]{1,3})/gm
     this.zoom_regex = /\b(z|zoom|in|out|i|o) ?(\+|-)? ?([0-9]{1,3})/gm
 
     this.shortcuts_regex = /\b(\w+)\b/gm
+  }
+
+  /**
+  Gets the key for storing this cameras position
+  */
+  get dbkey () {
+    return `ptz.cam.${this.name}`
   }
 
   getShortcutList () {
@@ -45,11 +54,23 @@ export default class PTZ {
   }
 
   move (coords) {
-    this.cam.absoluteMove({
-      x: this.calcPan(coords.pan),
-      y: this.calcTilt(coords.tilt),
-      zoom: this.calcZoom(coords.zoom)
-    })
+    this.logger.info(`move PTZ camera '${this.name}': ${JSON.stringify(this.data, null, '  ')}`)
+    this.db.store(this.dbkey, this.data) // Persist the current position
+      .catch(err => this.logger.warn(`storing data for '${this.dbkey}': ${err}`))
+
+    try {
+      if (this.cam.activeSources) { // If the camera is connected
+        this.cam.absoluteMove({
+          x: this.calcPan(coords.pan),
+          y: this.calcTilt(coords.tilt),
+          zoom: this.calcZoom(coords.zoom)
+        }, (err) => this.logger.warn(`unable to move camera ${this.name}: ${err}`))
+      } else {
+        this.logger.info(`unable to move offline camera '${this.name}'`)
+      }
+    } catch (err) {
+      this.logger.warn(`Cam.absoluteMove threw an exception moving camera ${this.name}: ${err}`)
+    }
   }
 
   calcPan (pan) {
@@ -102,10 +123,18 @@ export default class PTZ {
   }
 
   status () {
-    this.cam.getStatus({}, (err, res) => {
-      if (err) this.logger.error(`Error getting camera status for '${this.name}': ${err}`)
-      else console.info(JSON.stringify(res, null, 2)) // TODO: use logger once log levels are implemeted
-    })
+    try {
+      if (this.cam.activeSources) { // If the camera is connected
+        this.cam.getStatus({}, (err, res) => {
+          if (err) this.logger.warn(`Unable to get camera status for '${this.name}': ${err}`)
+          else this.logger.info(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`) // TODO: use logger once log levels are implemeted
+        })
+      } else {
+        this.logger.info(`unable to get status for offline camera '${this.name}'`)
+      }
+    } catch (err) {
+      this.logger.warn(`Cam.getStatus threw an exception getting status for camera ${this.name}: ${err}`)
+    }
   }
 
   command (txt) {
