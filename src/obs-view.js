@@ -1,4 +1,4 @@
-import { GoatDB } from './goatdb.mjs'
+import { GoatStore } from './goatstore.mjs'
 
 export default class OBSView {
   constructor (options) {
@@ -9,11 +9,10 @@ export default class OBSView {
     this.obs = options.obs
     this.logger = options.logger || console
 
-    this.db = options.db || new GoatDB({ logger: this.logger })
+    this.db = options.db || new GoatStore({ logger: this.logger })
 
     this.windowsdb = 'obs.windows' // A unique key to store the object as
-    this.db.init()
-      .then(() => this.db.fetch(this.windowsdb))
+    this.db.fetch(this.windowsdb)
       .then((data) => {
         // Try to get it from the database first. If not, grab it from config.
         if (data) {

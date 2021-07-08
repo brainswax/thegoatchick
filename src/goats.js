@@ -2,7 +2,7 @@ import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
 import OBSView from './obs-view.js'
 import PTZ from './ptz.js'
-import { GoatDB } from './goatdb.mjs'
+import { GoatStore } from './goatstore.mjs'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 
@@ -46,7 +46,11 @@ function getPTZCams (configFile, options = []) {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
   process.on('beforeExit', (code) => {
-    if (!app.exited) { app.exited = true; logger.info(`== about to exit with code: ${code}`) }
+    if (!app.exited) {
+      app.exited = true
+      logger.info(`== about to exit with code: ${code}`)
+      db.close()
+    }
   })
   process.on('uncaughtException', (err, origin) => {
     logger.error(`${origin}: ${err}`)
@@ -62,7 +66,7 @@ function getPTZCams (configFile, options = []) {
     .catch(e => { logger.error(`Unable to open package information: ${e}`) })
 
   // Open and initialize the sqlite database for storing object states across restarts
-  const db = new GoatDB({ logger: logger, file: process.env.DB_FILE })
+  const db = new GoatStore({ logger: logger, file: process.env.DB_FILE })
   db.init() // creates the database if it doesn't exist
     .catch(e => logger.warn(`Unable to initialize the database: ${e}`))
 

@@ -1,5 +1,5 @@
 import { Cam } from 'onvif'
-import { GoatDB } from './goatdb.mjs'
+import { GoatStore } from './goatstore.mjs'
 
 export default class PTZ {
   constructor (options) {
@@ -7,7 +7,7 @@ export default class PTZ {
     this.version = options.version || 1
 
     this.logger = options.logger || console
-    this.db = options.db || new GoatDB({ logger: this.logger })
+    this.db = options.db || new GoatStore({ logger: this.logger })
 
     this.cam = new Cam({
       hostname: options.hostname,

@@ -1,6 +1,6 @@
 {
   "name": "thegoatchick",
-  "version": "1.0.7-persist5",
+  "version": "1.1.0-beta",
   "description": "watch twitch chat and do stuff",
   "scripts": {
     "lint": "standard",
