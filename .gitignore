@@ -6,4 +6,4 @@ conf/*.json
 !conf/*.test.json
 *.sqlite
 *.sqlite3
-*sqlite-journal
+*-journal
