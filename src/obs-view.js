@@ -1,3 +1,5 @@
+import { GoatDB } from './goatdb.mjs'
+
 export default class OBSView {
   constructor (options) {
     // A map of aliases to camera names
@@ -7,17 +9,32 @@ export default class OBSView {
     this.obs = options.obs
     this.logger = options.logger || console
 
-    if (options.config) {
-      import(options.config)
-        .then(views => {
-          this.obsWindows = views.default.windows
-          this.addAliases(views.default.aliases)
-          this.logger.info('== loaded OBS view config')
-        })
-        .catch(err => {
-          this.logger.error(`Unable to load OBS aliases: ${err}`)
-        })
-    }
+    this.db = options.db || new GoatDB()
+
+    this.windowsdb = 'obs.windows'
+    this.db.init()
+      .then(() => this.db.fetch(this.windowsdb))
+      .then((data) => {
+        // Try to get it from the database first. If not, grab it from config.
+        if (data) {
+          this.logger.info('== loaded OBS windows from the database')
+          this.obsWindows = data
+        }
+      })
+      .then(() => {
+        if (options.config) { // Not in the database, load from config
+          return import(options.config)
+            .then(views => {
+              if (!this.obsWindows) this.obsWindows = views.default.windows
+              this.addAliases(views.default.aliases)
+              this.logger.info('== loaded OBS view config from config')
+            })
+            .catch(err => {
+              this.logger.error(`Unable to load OBS aliases: ${err}`)
+            })
+        }
+      })
+      .catch(err => this.logger.info(`Unable to retrieve obs views from the database: ${err}`))
   }
 
   /**
@@ -121,6 +138,7 @@ export default class OBSView {
     })
 
     this.changed.clear()
+    this.db.store(this.windowsdb, this.obsWindows)
   }
 
   // TODO: implement

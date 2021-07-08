@@ -14,7 +14,7 @@ async function get (that, sql, params = []) {
   return new Promise((resolve, reject) => {
     that.db.get(sql, params, (err, data) => {
       if (err) reject(err)
-      else resolve(JSON.parse(data.value))
+      else resolve(data ? JSON.parse(data.value) : null)
     })
   })
 }
@@ -24,7 +24,7 @@ class GoatDB {
     this.logger = opts.logger || console
     this.initialized = false
 
-    const file = opts.file || './goat.sqlite3'
+    const file = opts.file || './goatdb.sqlite3'
     this.db = opts.db || new sqlite3.Database(file, (err) => {
       if (err) this.logger.warn(`Could not connect to database '${file}'`)
     })

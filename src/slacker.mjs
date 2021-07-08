@@ -88,7 +88,7 @@ logger.level.slack = logger.ERROR
 
 // This will generate logs despite the log level settings
 logger.log = async log => {
-  console.log(`[${new Date().toISOString()}] Info: ${log}`)
+  console.log(`[${new Date().toISOString()}] Info:  ${log}`)
   return notify(formatInfo(log))
 }
 
