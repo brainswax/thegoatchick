@@ -56,11 +56,6 @@ export default class OBSView {
       .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before
       .replace(/[a-z][:][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
       .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
-
-      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
-      .replace(/[\s]+[\d]+[\s]+[\D]+/g, (s) => { // find instance like: 1 treat
-        return ' ' + s.replace(/[\s]+/g, '') // remove the extraneous whitespace: 1treat
-      })
       .split(/[\s]+/) // split on whitespace
 
     words.forEach(word => {
