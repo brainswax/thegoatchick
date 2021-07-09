@@ -52,10 +52,10 @@ export default class OBSView {
     let n = 0
 
     const words = msg.toLowerCase()
+      .replace(/[\d]+[\s]+[\D]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
+      .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before
+      .replace(/[a-z][:][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
       .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
-      .replace(/[\s]+[\d]+[\s]+[\D]+/g, (s) => { // find instance like: 1 treat
-        return ' ' + s.replace(/[\s]+/g, '') // remove the extraneous whitespace: 1treat
-      })
       .split(/[\s]+/) // split on whitespace
 
     words.forEach(word => {
@@ -130,6 +130,7 @@ export default class OBSView {
     this.obsWindows.forEach(view => {
       if (this.changed.has(view.item)) {
         this.obs.send('SetSceneItemProperties', view)
+          .then(() => this.changed.delete(view.item))
           .catch(err => { this.logger.warn(`unable to update OBS view '${view.item}': ${JSON.stringify(err, null, '  ')}`) })
         this.changed.delete(view.item)
       }
@@ -139,10 +140,13 @@ export default class OBSView {
     this.changed.forEach((cam) => {
       const view = { item: cam, visible: false }
       this.obs.send('SetSceneItemProperties', view)
+        .then(() => this.changed.delete(view.item))
         .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${JSON.stringify(err, null, '  ')}`) })
     })
 
-    this.changed.clear()
+    if (this.changed.size > 0) { // Something didn't update, let's try again later
+      setTimeout(() => this.updateOBS(), 5000)
+    }
     this.db.store(this.dbkey, this.obsWindows)
   }
 

@@ -73,18 +73,28 @@ async function notify (msg) {
 
 const logger = { }
 Object.defineProperties(logger, {
-  EMERGENCY: { value: 0, writeable: false },
-  ALERT: { value: 1, writeable: false },
-  CRITICAL: { value: 2, writeable: false },
-  ERROR: { value: 3, writeable: false },
-  WARN: { value: 4, writeable: false },
-  NOTICE: { value: 5, writeable: false },
-  INFO: { value: 6, writeable: false },
-  DEBUG: { value: 7, writeable: false }
+  EMERGENCY: { value: 0, writeable: false, enumerable: true },
+  ALERT: { value: 1, writeable: false, enumerable: true },
+  CRITICAL: { value: 2, writeable: false, enumerable: true },
+  ERROR: { value: 3, writeable: false, enumerable: true },
+  WARN: { value: 4, writeable: false, enumerable: true },
+  NOTICE: { value: 5, writeable: false, enumerable: true },
+  INFO: { value: 6, writeable: false, enumerable: true },
+  DEBUG: { value: 7, writeable: false, enumerable: true },
+  level: { value: {}, writeable: false, enumerable: false }
 })
-logger.level = {}
 logger.level.console = logger.DEBUG
 logger.level.slack = logger.ERROR
+
+logger.getLogLevel = (value) => {
+  let level = 'DEBUG'
+
+  for (const l in logger) {
+    if (logger[l] === value) level = l
+  }
+
+  return level
+}
 
 // This will generate logs despite the log level settings
 logger.log = async log => {
