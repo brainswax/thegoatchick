@@ -1,6 +1,6 @@
 {
   "name": "thegoatchick",
-  "version": "1.1.2",
+  "version": "1.1.2-shortcuts",
   "description": "watch twitch chat and do stuff",
   "scripts": {
     "lint": "standard",

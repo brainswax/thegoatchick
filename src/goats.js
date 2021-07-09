@@ -78,9 +78,7 @@ function getPTZCams (configFile, options = []) {
   // Connect to OBS
   obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
     .then(() => logger.info('== connected to OBS'))
-    .catch(err => {
-      logger.error(`OBS connection failed: ${JSON.stringify(err, null, prettySpace)}`)
-    })
+    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
 
   // Set up OBS window changer
   const obsView = new OBSView({
@@ -93,8 +91,8 @@ function getPTZCams (configFile, options = []) {
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
   const cams = await getPTZCams(process.env.PTZ_CONFIG, { logger: logger, db: db })
-    .then((cams) => { logger.info('== loaded PTZ cameras'); return cams })
-    .catch(err => logger.error(`Unable to get PTZ cams: ${err}`))
+    .then((cams) => { logger.info('== loaded cameras'); return cams })
+    .catch(err => logger.error(`== loading cameras: ${err}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to twitch
