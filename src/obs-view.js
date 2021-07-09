@@ -52,6 +52,11 @@ export default class OBSView {
     let n = 0
 
     const words = msg.toLowerCase()
+      .replace(/[\d]+[\s]+[\D]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
+      .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before
+      .replace(/[a-z][:][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
+
       .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
       .replace(/[\s]+[\d]+[\s]+[\D]+/g, (s) => { // find instance like: 1 treat
         return ' ' + s.replace(/[\s]+/g, '') // remove the extraneous whitespace: 1treat
