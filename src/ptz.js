@@ -1,6 +1,14 @@
 import { Cam } from 'onvif'
 import { GoatStore } from './goatstore.mjs'
 
+const panRegex = /(p|pan|right|left|r|l) ?(\+|-)? ?([0-9]{1,3})/m
+const tiltRegex = /(t|tilt|down|up|d|u) ?(\+|-)? ?([0-9]{1,3})/m
+const zoomRegex = /(z|zoom|in|out|i|o) ?(\+|-)? ?([0-9]{1,3})/m
+
+function coordsEqual (c1, c2) {
+  return c1.pan === c2.pan & c1.tilt === c2.tilt & c1.zoom === c2.zoom
+}
+
 export default class PTZ {
   constructor (options) {
     this.name = options.name || 'unnamed'
@@ -18,45 +26,45 @@ export default class PTZ {
       else this.logger.info(`connected to camera: ${this.name}`)
     })
 
-    this.db.fetch(this.dbkey)
+    this.db.fetch(this.positionkey)
       .then(data => {
-        if (data) this.data = data
-        else {
-          this.data = {
-            coords: { pan: 240, tilt: 20, zoom: 50 },
-            shortcuts: {}
-          }
-        }
+        this.data = data || { coords: { pan: 240, tilt: 20, zoom: 0 } }
         this.logger.info(`Initial PTZ camera position for '${this.name}': ${JSON.stringify(this.data, null, '  ')}`)
       })
-      .catch(err => this.logger.warn(`Unable to retrieve persisted data for PTZ camera '${this.name}': ${err}`))
+      .catch(err => this.logger.warn(`Unable to retrieve persisted coordinates for PTZ camera '${this.name}': ${err}`))
 
-    this.pan_regex = /\b(p|pan|right|left|r|l) ?(\+|-)? ?([0-9]{1,3})/gm
-    this.tilt_regex = /\b(t|tilt|down|up|d|u) ?(\+|-)? ?([0-9]{1,3})/gm
-    this.zoom_regex = /\b(z|zoom|in|out|i|o) ?(\+|-)? ?([0-9]{1,3})/gm
+    this.db.fetch(this.shortcutkey)
+      .then(shortcuts => {
+        this.shortcuts = shortcuts || {}
+        this.logger.info(`Initial shortcuts for '${this.name}': ${JSON.stringify(this.shortcuts, null, '  ')}`)
+      })
+      .catch(err => this.logger.warn(`Unable to retrieve persisted coordinates for PTZ camera '${this.name}': ${err}`))
 
-    this.shortcuts_regex = /\b(\w+)\b/gm
+    this.commands = new Map()
+    this.commands.set('save', (...args) => this.saveShortcut(...args))
+    this.commands.set('s', (...args) => this.saveShortcut(...args))
+    this.commands.set('delete', (...args) => this.deleteShortcut(...args))
+    this.commands.set('d', (...args) => this.deleteShortcut(...args))
+    this.commands.set('show', (...args) => this.showShortcut(...args))
+    this.commands.set('info', (...args) => this.showShortcut(...args))
+    this.commands.set('i', (...args) => this.showShortcut(...args))
   }
 
   /**
   Gets the key for storing this cameras position
   */
-  get dbkey () {
+  get positionkey () {
     return `ptz.cam.${this.name}`
   }
 
-  getShortcutList () {
-    let shortcuts = ''
-    Object.keys(this.data.shortcuts).forEach(item => {
-      shortcuts = shortcuts + item + ' '
-    })
-    return shortcuts
+  get shortcutkey () {
+    return `ptz.${this.name}.shortcut`
   }
 
   move (coords) {
     this.logger.info(`move PTZ camera '${this.name}': ${JSON.stringify(this.data, null, '  ')}`)
-    this.db.store(this.dbkey, this.data) // Persist the current position
-      .catch(err => this.logger.warn(`storing data for '${this.dbkey}': ${err}`))
+    this.db.store(this.positionkey, this.data) // Persist the current position
+      .catch(err => this.logger.warn(`storing data for '${this.positionkey}': ${err}`))
 
     try {
       if (this.cam.activeSources) { // If the camera is connected
@@ -117,7 +125,6 @@ export default class PTZ {
     if (v > 100) v = 100
 
     // process user set limits
-
     this.data.coords.zoom = v
     return Number((v * 0.01).toFixed(2))
   }
@@ -127,7 +134,7 @@ export default class PTZ {
       if (this.cam.activeSources) { // If the camera is connected
         this.cam.getStatus({}, (err, res) => {
           if (err) this.logger.warn(`Unable to get camera status for '${this.name}': ${err}`)
-          else this.logger.info(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`) // TODO: use logger once log levels are implemeted
+          else this.logger.info(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`)
         })
       } else {
         this.logger.info(`unable to get status for offline camera '${this.name}'`)
@@ -137,56 +144,87 @@ export default class PTZ {
     }
   }
 
-  command (txt) {
-    const strLower = txt.toLowerCase()
+  saveShortcut (shortcut) {
+    this.logger.log(`saving shortcut: { camera: '${this.name}', shortcut: ${JSON.stringify(shortcut)}, coords: ${JSON.stringify(this.data.coords)} }`)
 
-    /*
-    const words = strLower
-      .replace(/[\d]+[\s]+[\D]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
-      .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before
-      .replace(/[a-z][:][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
-      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
-      */
-    // shortcuts
-    let matches = strLower.match(this.shortcuts_regex)
-    if (matches === null) matches = []
+    this.shortcuts[shortcut] = JSON.parse(JSON.stringify(this.data.coords)) // deep copy
+    this.db.store(this.shortcutkey, this.shortcuts) // Persist the current position and shortcuts
+      .catch(err => this.logger.warn(`storing shortcuts for '${this.shortcutkey}': ${err}`))
+  }
 
-    let first = true
-    matches.forEach(match => {
-      if (!first && this.data.shortcuts[match]) {
-        this.move(this.data.shortcuts[match])
-        return
-      }
-      first = false
-    })
+  deleteShortcut (shortcut) {
+    this.logger.log(`deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.shortcuts.name)} }`)
 
-    // manual control
-    const coords = this.data.coords
-    let haveMove = false
+    delete this.shortcuts[shortcut]
+    this.db.store(this.shortcutkey, this.shortcuts) // Persist the current position and shortcuts
+      .catch(err => this.logger.warn(`storing shortcuts for '${this.shortcutkey}': ${err}`))
+  }
 
+  showShortcut (shortcut) {
+    if (shortcut === '*') {
+      this.logger.info(`show all: { camera: '${this.name}', shortcuts: ${JSON.stringify(this.shortcuts, null, '  ')}}`)
+    }
+    if (this.shortcuts[shortcut]) {
+      this.logger.info(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.shortcuts[shortcut])} }`)
+    }
+  }
+
+  apply (cmd) {
+    // check manual camera controls
+    if (cmd.search(panRegex) >= 0 || cmd.search(tiltRegex) >= 0 || cmd.search(zoomRegex) >= 0) {
+      this.logger.debug(`moving camera '${this.name}': ${cmd}`)
+      this.applyMove(cmd)
+    } else if (cmd.search(/[a-z]+:[\S]+/) >= 0) { // check commands
+      this.logger.debug(`camera command '${this.name}': ${cmd}`)
+      this.applyCommand(cmd)
+    } else if (this.shortcuts[cmd]) { // check shortcuts
+      this.logger.debug(`found shortcut { camera: '${this.name}', shortcut: ${cmd}, coords: ${JSON.stringify(this.shortcuts[cmd])}`)
+      this.data.coords = JSON.parse(JSON.stringify(this.shortcuts[cmd]))
+    } else {
+      this.logger.debug(`command ignored '${this.name}': ${cmd}`)
+    }
+  }
+
+  applyCommand (cmd) {
+    try {
+      const [command, shortcut] = cmd.split(/[:]+/)
+      if (this.commands.has(command)) this.commands.get(command)(shortcut)
+    } catch (e) {
+      this.logger.error(`applyCommand: ${e}`)
+    }
+  }
+
+  applyMove (cmd) {
     let p = []
     let t = []
     let z = []
-    if (strLower.match(this.pan_regex) != null) { p = [...this.pan_regex.exec(strLower)] }
-    if (strLower.match(this.tilt_regex) != null) { t = [...this.tilt_regex.exec(strLower)] }
-    if (strLower.match(this.zoom_regex) != null) { z = [...this.zoom_regex.exec(strLower)] }
+    this.logger.debug(`applyMove: { camera: ${this.name}, cmd: ${cmd}, coords: ${JSON.stringify(this.data.coords)}}`)
 
-    if (p.length !== 0) {
-      coords.pan = this.getVal(p, coords.pan)
-      haveMove = true
+    if (cmd.search(panRegex) >= 0) { p = [...panRegex.exec(cmd)] }
+    if (cmd.search(tiltRegex) >= 0) { t = [...tiltRegex.exec(cmd)] }
+    if (cmd.search(zoomRegex) >= 0) { z = [...zoomRegex.exec(cmd)] }
+
+    if (p.length !== 0) this.data.coords.pan = this.getVal(p, this.data.coords.pan)
+    if (t.length !== 0) this.data.coords.tilt = this.getVal(t, this.data.coords.tilt)
+    if (z.length !== 0) this.data.coords.zoom = this.getVal(z, this.data.coords.zoom)
+  }
+
+  command (txt) {
+    const oldCoords = JSON.parse(JSON.stringify(this.data.coords))
+
+    const words = txt.trim().toLowerCase()
+      .replace(/[a-z]+[\s]+[\d]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
+      .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
+      .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
+      .split(/[\s]+/) // split on whitespace
+
+    words.forEach(cmd => { this.apply(cmd) })
+
+    if (!coordsEqual(oldCoords, this.data.coords)) {
+      this.logger.debug(`Position changed:\nold: ${JSON.stringify(oldCoords)}\nnew: ${JSON.stringify(this.data.coords)}`)
+      this.move()
     }
-
-    if (t.length !== 0) {
-      coords.tilt = this.getVal(t, coords.tilt)
-      haveMove = true
-    }
-
-    if (z.length !== 0) {
-      coords.zoom = this.getVal(z, coords.zoom)
-      haveMove = true
-    }
-
-    if (haveMove) { this.move(coords) }
   }
 
   getVal (matches, current) {
@@ -221,7 +259,7 @@ export default class PTZ {
     })
 
     if (abs) {
-      pos = val
+      pos = Number(val)
     } else {
       if (isPos) {
         pos += Number(val)

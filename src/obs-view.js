@@ -51,9 +51,9 @@ export default class OBSView {
     const commands = []
     let n = 0
 
-    const words = msg.toLowerCase()
+    const words = msg.trim().toLowerCase()
       .replace(/[\d]+[\s]+[\D]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
-      .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before
+      .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
       .replace(/[a-z][:][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
       .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
       .split(/[\s]+/) // split on whitespace
@@ -144,9 +144,10 @@ export default class OBSView {
         .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${JSON.stringify(err, null, '  ')}`) })
     })
 
-    if (this.changed.size > 0) { // Something didn't update, let's try again later
-      setTimeout(() => this.updateOBS(), 5000)
+    if (this.changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again late
+      setTimeout(() => this.updateOBS(), parseInt(process.env.OBS_RETRY_DELAY) || 5000)
     }
+
     this.db.store(this.dbkey, this.obsWindows)
   }
 
