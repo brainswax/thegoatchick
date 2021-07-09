@@ -42,6 +42,15 @@ function getPTZCams (configFile, options = []) {
     .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
 }
 
+function updateLog (dest, level) {
+  dest = dest.toLowerCase()
+  level = level.toUpperCase()
+  if (dest in logger.level && level in logger) {
+    logger.level[dest] = logger[level]
+    logger.log(`== log levels: { console: ${logger.getLogLevel(logger.level.console)}, slack: ${logger.getLogLevel(logger.level.slack)} }`)
+  }
+}
+
 ;(async () => {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
@@ -144,9 +153,9 @@ function getPTZCams (configFile, options = []) {
   function chatBot (str, context) {
     const wordsRegex = /!(\w+)\b/gm
 
-    if (str.startsWith('!')) logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    if (str.trim().startsWith('!')) logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
 
-    const matches = str.toLowerCase().match(wordsRegex)
+    const matches = str.trim().toLowerCase().match(wordsRegex)
     if (matches == null || obsView.cameraTimeout(context.username)) return
 
     matches.forEach(match => {
@@ -197,30 +206,46 @@ function getPTZCams (configFile, options = []) {
           return
 
         // MOD COMMANDS
+        case '!log': {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
+            const words = str.trim()
+              .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
+              .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+              .split(/[\s]+/) // split on whitespace
+
+            words.forEach((word) => {
+              if (word.search(':') > 0) {
+                const [dest, level] = word.split(/[:]/)
+                updateLog(dest, level)
+              }
+            })
+          }
+          return
+        }
         case '!mute':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             obs.send('SetMute', { source: 'Audio', mute: true })
           }
           return
         case '!unmute':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             obs.send('SetMute', { source: 'Audio', mute: false })
           }
           return
         case '!stop':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             chat.say(twitchChannel, 'Stopping')
             obs.send('StopStreaming')
           }
           return
         case '!start':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             chat.say(twitchChannel, 'Starting')
             obs.send('StartStreaming')
           }
           return
         case '!restart':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             chat.say(twitchChannel, 'Stopping')
             obs.send('StopStreaming')
             setTimeout(function () { chat.say(twitchChannel, ':Z Five') }, 5000)
