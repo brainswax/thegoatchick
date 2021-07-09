@@ -140,12 +140,13 @@ export default class PTZ {
   command (txt) {
     const strLower = txt.toLowerCase()
 
+    /*
     const words = strLower
       .replace(/[\d]+[\s]+[\D]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
       .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before
       .replace(/[a-z][:][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
       .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
-
+      */
     // shortcuts
     let matches = strLower.match(this.shortcuts_regex)
     if (matches === null) matches = []
