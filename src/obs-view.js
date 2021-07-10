@@ -102,9 +102,9 @@ export default class OBSView {
   */
   inView (camera) {
     let inview = false
-    this.obsWindows.forEach((w) => {
-      if (this.aliases.has(camera) && this.aliases.get(camera) === w.item) { inview = true }
-    })
+    if (this.aliases.has(camera)) {
+      this.obsWindows.forEach((w) => { inview = inview | this.aliases.get(camera) === w.item })
+    }
 
     return inview
   }
