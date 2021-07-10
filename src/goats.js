@@ -42,15 +42,6 @@ function getPTZCams (configFile, options = []) {
     .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
 }
 
-function updateLog (dest, level) {
-  dest = dest.toLowerCase()
-  level = level.toUpperCase()
-  if (dest in logger.level && level in logger) {
-    logger.level[dest] = logger[level]
-    logger.log(`== log levels: { console: ${logger.getLogLevel(logger.level.console)}, slack: ${logger.getLogLevel(logger.level.slack)} }`)
-  }
-}
-
 ;(async () => {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
@@ -216,7 +207,7 @@ function updateLog (dest, level) {
             words.forEach((word) => {
               if (word.search(':') > 0) {
                 const [dest, level] = word.split(/[:]/)
-                updateLog(dest, level)
+                logger.updateLog(dest, level)
               }
             })
           }

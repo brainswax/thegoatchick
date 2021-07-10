@@ -96,6 +96,15 @@ logger.getLogLevel = (value) => {
   return level
 }
 
+logger.updateLog = (dest, level) => {
+  dest = dest.toLowerCase()
+  level = level.toUpperCase()
+  if (dest in logger.level && level in logger) {
+    logger.level[dest] = logger[level]
+    logger.log(`== setting log level for ${dest}: ${level}`)
+  }
+}
+
 // This will generate logs despite the log level settings
 logger.log = async log => {
   console.log(`[${new Date().toISOString()}] info:  ${log}`)
