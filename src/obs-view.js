@@ -159,7 +159,7 @@ export default class OBSView {
         .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${err.error}`) })
     })
 
-    if (this.changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again late
+    if (this.changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again later
       setTimeout(() => this.updateOBS(), parseInt(process.env.OBS_RETRY_DELAY) || 5000)
     }
 
