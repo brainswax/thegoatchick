@@ -224,7 +224,7 @@ export default class PTZ {
   @param shortcut name of the shortcut
   */
   moveToShortcut (shortcut) {
-    if (this.data.shortcuts.has(shortcut)) {
+    if (shortcut in this.data.shortcuts) {
       this.data.coords = this.data.shortcuts[shortcut]
       this.move(this.data.coords)
     }

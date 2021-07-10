@@ -120,14 +120,14 @@ function getPTZCams (configFile, options = []) {
   function onCheerHandler (target, context, msg) {
     obsView.processChat(msg)
     if (!obsView.inView('treat')) {
-      obsView.setWindow(1, 'treat')
+      obsView.processChat('1treat')
     }
     cams.get('treat').moveToShortcut('cheer')
   }
 
   function onChatHandler (target, context, msg) {
     if (context['display-name'] === 'HerdBoss') return // ignore the bot
-    // logger.debug(`User context: ${JSON.stringify(context, null, prettySpace)}`)
+
     chatBot(msg, context)
   }
   // Called every time the bot connects to Twitch chat:
