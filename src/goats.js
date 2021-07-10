@@ -118,6 +118,7 @@ function getPTZCams (configFile, options = []) {
     .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, prettySpace)}`))
 
   function onCheerHandler (target, context, msg) {
+    logger.log(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, prettySpace)}`)
     obsView.processChat(msg)
     if (!obsView.inView('treat')) {
       obsView.processChat('1treat')
