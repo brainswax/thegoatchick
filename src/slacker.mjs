@@ -96,16 +96,25 @@ logger.getLogLevel = (value) => {
   return level
 }
 
+logger.updateLog = (dest, level) => {
+  dest = dest.toLowerCase()
+  level = level.toUpperCase()
+  if (dest in logger.level && level in logger) {
+    logger.level[dest] = logger[level]
+    logger.log(`== setting log level for ${dest}: ${level}`)
+  }
+}
+
 // This will generate logs despite the log level settings
 logger.log = async log => {
-  console.log(`[${new Date().toISOString()}] Info:  ${log}`)
+  console.log(`[${new Date().toISOString()}] info:  ${log}`)
   return notify(formatInfo(log))
 }
 
 // Send an error message to slack
 logger.error = async log => {
   if (logger.level.console >= logger.ERROR) {
-    console.error(`[${new Date().toISOString()}] Error: ${log}`)
+    console.error(`[${new Date().toISOString()}] error: ${log}`)
   }
   return logger.level.slack >= logger.ERROR ? notify(formatError(log)) : true
 }
@@ -113,7 +122,7 @@ logger.error = async log => {
 // Send a warning message to slack
 logger.warn = async log => {
   if (logger.level.console >= logger.WARN) {
-    console.warn(`[${new Date().toISOString()}] Warn:  ${log}`)
+    console.warn(`[${new Date().toISOString()}] warn:  ${log}`)
   }
   return logger.level.slack >= logger.WARN ? notify(formatWarn(log)) : true
 }
@@ -121,7 +130,7 @@ logger.warn = async log => {
 // Send an information message to slack
 logger.info = async log => {
   if (logger.level.console >= logger.INFO) {
-    console.info(`[${new Date().toISOString()}] Info:  ${log}`)
+    console.info(`[${new Date().toISOString()}] info:  ${log}`)
   }
   return logger.level.slack >= logger.INFO ? notify(formatInfo(log)) : true
 }
@@ -129,7 +138,7 @@ logger.info = async log => {
 // Send an debug message to slack
 logger.debug = async log => {
   if (logger.level.console >= logger.DEBUG) {
-    console.debug(`[${new Date().toISOString()}] Debug: ${log}`)
+    console.debug(`[${new Date().toISOString()}] debug: ${log}`)
   }
   return logger.level.slack >= logger.DEBUG ? notify(formatDebug(log)) : true
 }

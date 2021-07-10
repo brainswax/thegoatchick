@@ -78,9 +78,7 @@ function getPTZCams (configFile, options = []) {
   // Connect to OBS
   obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
     .then(() => logger.info('== connected to OBS'))
-    .catch(err => {
-      logger.error(`OBS connection failed: ${JSON.stringify(err, null, prettySpace)}`)
-    })
+    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
 
   // Set up OBS window changer
   const obsView = new OBSView({
@@ -93,8 +91,8 @@ function getPTZCams (configFile, options = []) {
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
   const cams = await getPTZCams(process.env.PTZ_CONFIG, { logger: logger, db: db })
-    .then((cams) => { logger.info('== loaded PTZ cameras'); return cams })
-    .catch(err => logger.error(`Unable to get PTZ cams: ${err}`))
+    .then((cams) => { logger.info('== loaded cameras'); return cams })
+    .catch(err => logger.error(`== loading cameras: ${err}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to twitch
@@ -146,9 +144,9 @@ function getPTZCams (configFile, options = []) {
   function chatBot (str, context) {
     const wordsRegex = /!(\w+)\b/gm
 
-    if (str.startsWith('!')) logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    if (str.trim().startsWith('!')) logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
 
-    const matches = str.toLowerCase().match(wordsRegex)
+    const matches = str.trim().toLowerCase().match(wordsRegex)
     if (matches == null || obsView.cameraTimeout(context.username)) return
 
     matches.forEach(match => {
@@ -199,30 +197,46 @@ function getPTZCams (configFile, options = []) {
           return
 
         // MOD COMMANDS
+        case '!log': {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
+            const words = str.trim()
+              .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
+              .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+              .split(/[\s]+/) // split on whitespace
+
+            words.forEach((word) => {
+              if (word.search(':') > 0) {
+                const [dest, level] = word.split(/[:]/)
+                logger.updateLog(dest, level)
+              }
+            })
+          }
+          return
+        }
         case '!mute':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             obs.send('SetMute', { source: 'Audio', mute: true })
           }
           return
         case '!unmute':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             obs.send('SetMute', { source: 'Audio', mute: false })
           }
           return
         case '!stop':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             chat.say(twitchChannel, 'Stopping')
             obs.send('StopStreaming')
           }
           return
         case '!start':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             chat.say(twitchChannel, 'Starting')
             obs.send('StartStreaming')
           }
           return
         case '!restart':
-          if (context.mod) {
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
             chat.say(twitchChannel, 'Stopping')
             obs.send('StopStreaming')
             setTimeout(function () { chat.say(twitchChannel, ':Z Five') }, 5000)

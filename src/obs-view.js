@@ -11,35 +11,49 @@ export default class OBSView {
 
     this.db = options.db || new GoatStore({ logger: this.logger })
 
-    this.db.fetch(this.dbkey)
-      .then((data) => {
-        // Try to get it from the database first. If not, grab it from config.
-        if (data) {
-          this.logger.info('== loaded OBS windows from the database')
-          this.obsWindows = data
-        }
+    this.storedWindows
+      .then(windows => {
+        this.obsWindows = windows
+        return import(options.config || process.env.OBS_VIEWS_CONFIG)
       })
-      .then(() => {
-        if (options.config) { // Not in the database, load from config
-          return import(options.config)
-            .then(views => {
-              if (!this.obsWindows) this.obsWindows = views.default.windows
-              this.addAliases(views.default.aliases)
-              this.logger.info('== loaded OBS view config from config')
-            })
-            .catch(err => {
-              this.logger.error(`Unable to load OBS aliases: ${err}`)
-            })
-        }
+      .then(views => {
+        if (!this.obsWindows) this.obsWindows = views.default.windows
+        this.logger.debug(`initial windows: ${JSON.stringify(this.obsWindows, null, '  ')}`)
+
+        this.addAliases(views.default.aliases)
+        this.logger.debug(`initial aliases: ${JSON.stringify(Array.from(this.aliases.keys()))}`)
       })
-      .catch(err => this.logger.info(`Unable to retrieve obs views from the database: ${err}`))
+      .catch(err => this.logger.error(`initializing windows: ${err}`))
+  }
+
+  /**
+  This function is used to correct windows object structure that has changed between versions of this software
+  */
+  fixupWindows (views) {
+    // Nothing to fixup
+    return views
   }
 
   /**
   Gets the key for storing windows
   */
-  get dbkey () {
+  get windowskey () {
     return 'obs.windows'
+  }
+
+  get storedWindows () {
+    return this.db.fetch(this.windowskey)
+      .then(views => {
+        if (views) this.logger.info(`loaded the windows: ${JSON.stringify(views)}`)
+        return this.fixupWindows(views)
+      })
+      .catch(err => this.logger.warn(`loading the camera position for '${this.name}': ${err}`))
+  }
+
+  set storedWindows (views) {
+    this.logger.debug(`store the views: ${JSON.stringify(views)}`)
+    this.db.store(this.windowskey, views)
+      .catch(err => this.logger.warn(`storing the views: ${err}`))
   }
 
   /**
@@ -51,9 +65,9 @@ export default class OBSView {
     const commands = []
     let n = 0
 
-    const words = msg.toLowerCase()
+    const words = msg.trim().toLowerCase()
       .replace(/[\d]+[\s]+[\D]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
-      .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before
+      .replace(/[a-z][\s]+[:]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
       .replace(/[a-z][:][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
       .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
       .split(/[\s]+/) // split on whitespace
@@ -124,14 +138,15 @@ export default class OBSView {
     if (this.changed.length === 0) {
       this.logger.debug('no OBS views were changed')
     } else {
-      this.logger.debug(`updating OBS views...\nchanged: ${JSON.stringify(Array.from(this.changed))}\nobsWindows: ${JSON.stringify(this.obsWindows, null, '  ')}`)
+      this.logger.info(`changed windows: ${JSON.stringify(Array.from(this.changed))}`)
+      this.logger.debug(`updated windows: ${JSON.stringify(this.obsWindows, null, '  ')}`)
     }
 
     this.obsWindows.forEach(view => {
       if (this.changed.has(view.item)) {
         this.obs.send('SetSceneItemProperties', view)
           .then(() => this.changed.delete(view.item))
-          .catch(err => { this.logger.warn(`unable to update OBS view '${view.item}': ${JSON.stringify(err, null, '  ')}`) })
+          .catch(err => { this.logger.warn(`unable to update OBS view '${view.item}': ${err.error}`) })
         this.changed.delete(view.item)
       }
     })
@@ -141,13 +156,14 @@ export default class OBSView {
       const view = { item: cam, visible: false }
       this.obs.send('SetSceneItemProperties', view)
         .then(() => this.changed.delete(view.item))
-        .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${JSON.stringify(err, null, '  ')}`) })
+        .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${err.error}`) })
     })
 
-    if (this.changed.size > 0) { // Something didn't update, let's try again later
-      setTimeout(() => this.updateOBS(), 5000)
+    if (this.changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again later
+      setTimeout(() => this.updateOBS(), parseInt(process.env.OBS_RETRY_DELAY) || 5000)
     }
-    this.db.store(this.dbkey, this.obsWindows)
+
+    this.storedWindows = this.obsWindows
   }
 
   // TODO: implement
