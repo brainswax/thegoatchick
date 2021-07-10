@@ -219,6 +219,17 @@ export default class PTZ {
     }
   }
 
+  /**
+  Move directly to the named shortcut if it exists
+  @param shortcut name of the shortcut
+  */
+  moveToShortcut (shortcut) {
+    if (this.data.shortcuts.has(shortcut)) {
+      this.data.coords = this.data.shortcuts[shortcut]
+      this.move(this.data.coords)
+    }
+  }
+
   apply (cmd) {
     if (cmd.search(panRegex) >= 0 || cmd.search(tiltRegex) >= 0 || cmd.search(zoomRegex) >= 0) {
       this.logger.debug(`move camera '${this.name}': ${cmd}`)

@@ -119,6 +119,10 @@ function getPTZCams (configFile, options = []) {
 
   function onCheerHandler (target, context, msg) {
     obsView.processChat(msg)
+    if (!obsView.inView('treat')) {
+      obsView.setWindow(1, 'treat')
+    }
+    cams.get('treat').moveToShortcut('cheer')
   }
 
   function onChatHandler (target, context, msg) {
