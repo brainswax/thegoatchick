@@ -96,6 +96,20 @@ export default class OBSView {
   }
 
   /**
+  Determine whether the specified camera is currnetly in view
+  @param camera the camera name
+  @return true if the camera is currently shown in a window
+  */
+  inView (camera) {
+    let inview = false
+    if (this.aliases.has(camera)) {
+      this.obsWindows.forEach((w) => { inview |= this.aliases.get(camera) === w.item })
+    }
+
+    return inview
+  }
+
+  /**
   Add a dictionary of camera aliases
   @param allAliases an object with camera names as keys and an array of aliases
   */

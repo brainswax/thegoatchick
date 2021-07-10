@@ -1,12 +1,12 @@
 /* eslint-env jest */
-import * as goatdb from '../src/goatdb.mjs'
+import * as goatdb from '../src/goatstore.mjs'
 import fs from 'fs'
 
 describe('Test GoatDB functionality', () => {
   const file = './goatdb.sqlite3'
   if (fs.existsSync(file)) fs.unlinkSync(file)
 
-  const db = new goatdb.GoatDB({ file: file })
+  const db = new goatdb.GoatStore({ file: file })
 
   it('can store and retrieve an object', async () => {
     return db.init()
