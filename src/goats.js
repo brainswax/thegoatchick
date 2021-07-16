@@ -17,6 +17,7 @@ app.exited = false
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
 if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { process.env.OBS_VIEWS_CONFIG = '../conf/obs-views.json' }
 if (!process.env.DB_FILE || process.env.DB_FILE === '') { process.env.DB_FILE = './goatdb.sqlite3' }
+if (!process.env.APP_CONFIG || process.env.APP_CONFIG === '') { process.env.APP_CONFIG = '../conf/goats.json' }
 
 // Grab log levels to console and slack
 logger.level.console = logger[process.env.LOG_LEVEL_CONSOLE] || logger.level.console
@@ -41,6 +42,33 @@ function getPTZCams (configFile, options = []) {
       return c
     })
     .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
+}
+
+class AdminStore {
+  constructor (options) {
+    this.logger = options.logger || console
+    this.db = options.db || new GoatStore({ logger: this.logger })
+  }
+
+  get key () {
+    return 'admins'
+  }
+
+  get admins () {
+    return this.db.fetch(this.key)
+      .then(admins => {
+        if (admins) this.logger.info(`loaded the stored admins: ${JSON.stringify(admins)}`)
+        return new Set(admins)
+      })
+      .catch(err => this.logger.warn(`loading the admins: ${err}`))
+  }
+
+  set admins (admins) {
+    const a = Array.from(admins)
+    this.logger.info(`store the admins: ${JSON.stringify(a)}`)
+    this.db.store(this.key, a)
+      .catch(err => this.logger.warn(`storing the admins: ${err}`))
+  }
 }
 
 ;(async () => {
@@ -71,6 +99,20 @@ function getPTZCams (configFile, options = []) {
 
   // Open and initialize the sqlite database for storing object states across restarts
   const db = new GoatStore({ logger: logger, file: process.env.DB_FILE })
+  const adminStore = new AdminStore({ logger: logger, db: db })
+  const admins = await adminStore.admins
+
+  if (admins.size === 0) {
+    import(process.env.APP_CONFIG)
+      .then(config => {
+        logger.debug(`Loading admins: ${JSON.stringify(config)}`)
+        if (config && config.default && config.default.admins) {
+          config.default.admins.forEach(admin => admins.add(admin))
+          adminStore.admins = admins
+        }
+      })
+      .catch(e => logger.warn(`Unable to load admins from ${process.env.APP_CONFIG}: ${e}`))
+  }
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
@@ -164,42 +206,42 @@ function getPTZCams (configFile, options = []) {
         // SUBSCRIBER COMMANDS
         case '!cam':
         case '!camera':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
           obsView.processChat(str)
           return
         case '!treat':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
           if (cams.has('treat')) cams.get('treat').command(str)
           return
         case '!does':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
           if (cams.has('does')) cams.get('does').command(str)
           return
         case '!yard':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
           if (cams.has('yard')) cams.get('yard').command(str)
           return
         case '!kids':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
           if (cams.has('kids')) cams.get('kids').command(str)
           return
         case '!pasture':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
@@ -216,7 +258,7 @@ function getPTZCams (configFile, options = []) {
 
         // MOD COMMANDS
         case '!log': {
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             const words = str.trim()
               .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
               .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
@@ -231,8 +273,36 @@ function getPTZCams (configFile, options = []) {
           }
           return
         }
+        case '!admin':
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+            const words = str.trim().toLowerCase()
+              .replace(/[a-z]+[\s]+[\d]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
+              .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
+              .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+              .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
+              .split(/[\s]+/) // split on whitespace
+
+            words.forEach(cmd => {
+              if (cmd.search(/[a-z]+:[\S]+/) >= 0) {
+                const [command, value] = cmd.split(/[:]+/)
+                switch (command) {
+                  case 'add':
+                    logger.info(`Adding admin '${value}'`)
+                    admins.add(value)
+                    break
+                  case 'delete':
+                  case 'remove':
+                    logger.info(`Removing admin '${value}'`)
+                    admins.delete(value)
+                    break
+                }
+                adminStore.admins = admins
+              }
+            })
+          }
+          return
         case '!mute':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: true })
               .then(() => chat.say(twitchChannel, 'Stream muted'))
               .catch(e => {
@@ -242,7 +312,7 @@ function getPTZCams (configFile, options = []) {
           }
           return
         case '!unmute':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: false })
               .then(() => chat.say(twitchChannel, 'Stream unmuted'))
               .catch(e => {
@@ -252,12 +322,12 @@ function getPTZCams (configFile, options = []) {
           }
           return
         case '!restartscript':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             triggerRestart(process.env.RESTART_FILE)
           }
           return
         case '!stop':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
               .then(() => chat.say(twitchChannel, 'Stream stopped'))
               .catch(e => {
@@ -267,7 +337,7 @@ function getPTZCams (configFile, options = []) {
           }
           return
         case '!start':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StartStreaming')
               .then(() => chat.say(twitchChannel, 'Stream started'))
               .catch(e => {
@@ -277,7 +347,7 @@ function getPTZCams (configFile, options = []) {
           }
           return
         case '!restart':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
               .then(() => {
                 chat.say(twitchChannel, 'Stream stopped. Starting in...')
