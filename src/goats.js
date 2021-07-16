@@ -325,7 +325,7 @@ class AdminStore {
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             triggerRestart(process.env.RESTART_FILE)
               .then(() => logger.info(`Triggered restart and wrote file '${process.env.RESTART_FILE}'`))
-              .catch(e => logger.error(`Unable to write the restart file '${process.env.RESTART_FILE}': ${JSON.stringify(e)}`))
+              .catch(e => logger.error(`Unable to write the restart file '${process.env.RESTART_FILE}': ${e}`))
           }
           return
         case '!stop':
