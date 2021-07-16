@@ -234,43 +234,71 @@ function getPTZCams (configFile, options = []) {
         case '!mute':
           if (context.mod || (context.badges && context.badges.broadcaster)) {
             obs.send('SetMute', { source: 'Audio', mute: true })
+              .then(() => chat.say(twitchChannel, 'Stream muted'))
+              .catch(e => {
+                logger.error(`Unable to mute: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Unable to mute the stream!')
+              })
           }
           return
         case '!unmute':
           if (context.mod || (context.badges && context.badges.broadcaster)) {
             obs.send('SetMute', { source: 'Audio', mute: false })
+              .then(() => chat.say(twitchChannel, 'Stream unmuted'))
+              .catch(e => {
+                logger.error(`Unable to unmute: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Unable to unmute the stream!')
+              })
           }
           return
-        case '!reload':
+        case '!restartscript':
           if (context.mod || (context.badges && context.badges.broadcaster)) {
             triggerRestart(process.env.RESTART_FILE)
           }
           return
         case '!stop':
           if (context.mod || (context.badges && context.badges.broadcaster)) {
-            chat.say(twitchChannel, 'Stopping')
             obs.send('StopStreaming')
+              .then(() => chat.say(twitchChannel, 'Stream stopped'))
+              .catch(e => {
+                logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Something went wrong... unable to stop the stream')
+              })
           }
           return
         case '!start':
           if (context.mod || (context.badges && context.badges.broadcaster)) {
-            chat.say(twitchChannel, 'Starting')
             obs.send('StartStreaming')
+              .then(() => chat.say(twitchChannel, 'Stream started'))
+              .catch(e => {
+                logger.error(`Unable to start OBS: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Something went wrong... unable to start the stream')
+              })
           }
           return
         case '!restart':
           if (context.mod || (context.badges && context.badges.broadcaster)) {
-            chat.say(twitchChannel, 'Stopping')
             obs.send('StopStreaming')
-            setTimeout(function () { chat.say(twitchChannel, ':Z Five') }, 5000)
-            setTimeout(function () { chat.say(twitchChannel, ':\\ Four') }, 6000)
-            setTimeout(function () { chat.say(twitchChannel, ';p Three') }, 7000)
-            setTimeout(function () { chat.say(twitchChannel, ':) Two') }, 8000)
-            setTimeout(function () { chat.say(twitchChannel, ':D One') }, 9000)
-            setTimeout(function () {
-              chat.say(twitchChannel, 'Starting')
-              obs.send('StartStreaming')
-            }, 10000)
+              .then(() => {
+                chat.say(twitchChannel, 'Stream stopped. Starting in...')
+                setTimeout(function () { chat.say(twitchChannel, ':Z Five') }, 5000)
+                setTimeout(function () { chat.say(twitchChannel, ':\\ Four') }, 6000)
+                setTimeout(function () { chat.say(twitchChannel, ';p Three') }, 7000)
+                setTimeout(function () { chat.say(twitchChannel, ':) Two') }, 8000)
+                setTimeout(function () { chat.say(twitchChannel, ':D One') }, 9000)
+                setTimeout(function () {
+                  obs.send('StartStreaming')
+                    .then(() => chat.say(twitchChannel, 'Stream restarted'))
+                    .catch(e => {
+                      logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, prettySpace)}`)
+                      chat.say(twitchChannel, 'Something went wrong... unable to restart the stream')
+                    })
+                }, 10000)
+              })
+              .catch(e => {
+                logger.error(`Unable to stop OBS for a restart: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Something went wrong... the stream won\'t stop.')
+              })
           }
       }
     })
