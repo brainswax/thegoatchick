@@ -11,7 +11,7 @@ export default class OBSView {
 
     this.db = options.db || new GoatStore({ logger: this.logger })
 
-    this.storedWindows
+    this.storedWindows // Grab the previous window settings if they exist
       .then(windows => {
         this.obsWindows = windows
         return import(options.config || process.env.OBS_VIEWS_CONFIG)
@@ -118,7 +118,6 @@ export default class OBSView {
       aliases.forEach(alias => this.aliases.set(alias, cam))
       this.changed.add(cam)
     }
-    this.updateOBS()
   }
 
   setWindow (index, name) {

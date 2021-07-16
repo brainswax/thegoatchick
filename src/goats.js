@@ -74,19 +74,20 @@ function getPTZCams (configFile, options = []) {
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
   const obs = new OBSWebSocket()
-
-  // Connect to OBS
-  obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
-    .then(() => logger.info('== connected to OBS'))
-    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
-
-  // Set up OBS window changer
   const obsView = new OBSView({
     config: process.env.OBS_VIEWS_CONFIG,
     obs: obs,
     db: db,
     logger: logger
   })
+
+  // Connect to OBS
+  obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
+    .then(() => {
+      logger.info('== connected to OBS')
+      obsView.updateOBS()
+    })
+    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
