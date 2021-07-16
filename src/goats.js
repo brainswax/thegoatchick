@@ -175,35 +175,44 @@ function getPTZCams (configFile, options = []) {
             sayForSubs()
             return
           }
-          cams.get('treat').command(str)
+          if (cams.has('treat')) cams.get('treat').command(str)
           return
         case '!does':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
-          cams.get('does').command(str)
+          if (cams.has('does')) cams.get('does').command(str)
           return
         case '!yard':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
-          cams.get('yard').command(str)
+          if (cams.has('yard')) cams.get('yard').command(str)
           return
         case '!kids':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
-          cams.get('kids').command(str)
+          if (cams.has('kids')) cams.get('kids').command(str)
           return
         case '!pasture':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
             sayForSubs()
             return
           }
-          cams.get('pasture').command(str)
+          if (cams.has('pasture')) cams.get('pasture').command(str)
+          return
+        case '!bell':
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) return
+
+          // Automatically show the does camera if it's not already shown
+          if (!obsView.inView('does')) {
+            obsView.processChat('2does')
+          }
+          if (cams.has('does')) cams.get('does').moveToShortcut('bell')
           return
 
         // MOD COMMANDS
