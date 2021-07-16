@@ -127,7 +127,7 @@ function getPTZCams (configFile, options = []) {
     }
     cams.get('treat').moveToShortcut('cheer')
 
-    // Process this last to ensure the auto-treat doesn
+    // Process this last to ensure the auto-treat doesn't override a cheer command
     obsView.processChat(msg)
   }
 
