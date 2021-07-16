@@ -27,7 +27,7 @@ function getStamp () {
   stamp.uptime = proc.uptime()
   stamp.memory = proc.memoryUsage()
   stamp.hostname = os.hostname()
-  stamp.version = os.version()
+  // stamp.version = os.version()
   return JSON.stringify(stamp, null, '\t')
 };
 
