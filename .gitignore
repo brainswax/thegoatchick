@@ -1,5 +1,6 @@
 node_modules
 package-lock.json
+*restart.json
 .env*
 !.env.test
 conf/*.json

@@ -2,6 +2,7 @@ import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
 import OBSView from './obs-view.js'
 import PTZ from './ptz.js'
+import { triggerRestart } from './autostart.mjs'
 import { GoatStore } from './goatstore.mjs'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
@@ -238,6 +239,11 @@ function getPTZCams (configFile, options = []) {
         case '!unmute':
           if (context.mod || (context.badges && context.badges.broadcaster)) {
             obs.send('SetMute', { source: 'Audio', mute: false })
+          }
+          return
+        case '!reload':
+          if (context.mod || (context.badges && context.badges.broadcaster)) {
+            triggerRestart(process.env.RESTART_FILE)
           }
           return
         case '!stop':
