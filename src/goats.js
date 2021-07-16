@@ -121,11 +121,9 @@ function getPTZCams (configFile, options = []) {
   function onCheerHandler (target, context, msg) {
     logger.log(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, prettySpace)}`)
 
-    // Automatically show the treat camera if it's not already shown
-    if (!obsView.inView('treat')) {
-      obsView.processChat('1treat')
-    }
-    cams.get('treat').moveToShortcut('cheer')
+    // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
+    if (!obsView.inView('treat')) obsView.processChat('1treat')
+    if (cams.has('treat')) cams.get('treat').moveToShortcut('cheer')
 
     // Process this last to ensure the auto-treat doesn't override a cheer command
     obsView.processChat(msg)
@@ -208,11 +206,10 @@ function getPTZCams (configFile, options = []) {
           return
         case '!bell':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) return
+          logger.debug(`${context.username} is ringing the bell`)
 
-          // Automatically show the does camera if it's not already shown
-          if (!obsView.inView('does')) {
-            obsView.processChat('2does')
-          }
+          // Automatically show the 'does' camera at the 'bell' shortcut if it's not already shown
+          if (!obsView.inView('does')) obsView.processChat('2does')
           if (cams.has('does')) cams.get('does').moveToShortcut('bell')
           return
 
