@@ -151,14 +151,12 @@ function getPTZCams (configFile, options = []) {
   }
 
   function chatBot (str, context) {
-    const wordsRegex = /!(\w+)\b/gm
-
     // Only process the command if the message starts with a '!'
     if (!str.trim().startsWith('!')) return
 
     logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
 
-    const matches = str.trim().toLowerCase().match(wordsRegex)
+    const matches = str.trim().toLowerCase().match(/!(\w+)\b/gm)
     if (matches == null || obsView.cameraTimeout(context.username)) return
 
     matches.forEach(match => {
