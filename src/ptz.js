@@ -119,6 +119,7 @@ export default class PTZ {
 
   move (coords) {
     this.storePosition = coords
+    this.logger.debug(`Moving camera '${this.name}' to coordinates: ${JSON.stringify(coords)}`)
 
     try {
       if (this.cam.activeSources) { // If the camera is connected
@@ -227,6 +228,8 @@ export default class PTZ {
     if (shortcut in this.data.shortcuts) {
       this.data.coords = this.data.shortcuts[shortcut]
       this.move(this.data.coords)
+    } else {
+      this.logger.debug(`Shortcut '${shortcut}' does not exist for camera '${this.name}'`)
     }
   }
 

@@ -2,6 +2,7 @@ import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
 import OBSView from './obs-view.js'
 import PTZ from './ptz.js'
+import { triggerRestart } from './autostart.mjs'
 import { GoatStore } from './goatstore.mjs'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
@@ -16,6 +17,7 @@ app.exited = false
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
 if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { process.env.OBS_VIEWS_CONFIG = '../conf/obs-views.json' }
 if (!process.env.DB_FILE || process.env.DB_FILE === '') { process.env.DB_FILE = './goatdb.sqlite3' }
+if (!process.env.APP_CONFIG || process.env.APP_CONFIG === '') { process.env.APP_CONFIG = '../conf/goats.json' }
 
 // Grab log levels to console and slack
 logger.level.console = logger[process.env.LOG_LEVEL_CONSOLE] || logger.level.console
@@ -40,6 +42,33 @@ function getPTZCams (configFile, options = []) {
       return c
     })
     .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
+}
+
+class AdminStore {
+  constructor (options) {
+    this.logger = options.logger || console
+    this.db = options.db || new GoatStore({ logger: this.logger })
+  }
+
+  get key () {
+    return 'admins'
+  }
+
+  get admins () {
+    return this.db.fetch(this.key)
+      .then(admins => {
+        if (admins) this.logger.info(`loaded the stored admins: ${JSON.stringify(admins)}`)
+        return new Set(admins)
+      })
+      .catch(err => this.logger.warn(`loading the admins: ${err}`))
+  }
+
+  set admins (admins) {
+    const a = Array.from(admins)
+    this.logger.info(`store the admins: ${JSON.stringify(a)}`)
+    this.db.store(this.key, a)
+      .catch(err => this.logger.warn(`storing the admins: ${err}`))
+  }
 }
 
 ;(async () => {
@@ -70,23 +99,38 @@ function getPTZCams (configFile, options = []) {
 
   // Open and initialize the sqlite database for storing object states across restarts
   const db = new GoatStore({ logger: logger, file: process.env.DB_FILE })
+  const adminStore = new AdminStore({ logger: logger, db: db })
+  const admins = await adminStore.admins
+
+  if (admins.size === 0) {
+    import(process.env.APP_CONFIG)
+      .then(config => {
+        logger.debug(`Loading admins: ${JSON.stringify(config)}`)
+        if (config && config.default && config.default.admins) {
+          config.default.admins.forEach(admin => admins.add(admin))
+          adminStore.admins = admins
+        }
+      })
+      .catch(e => logger.warn(`Unable to load admins from ${process.env.APP_CONFIG}: ${e}`))
+  }
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
   const obs = new OBSWebSocket()
-
-  // Connect to OBS
-  obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
-    .then(() => logger.info('== connected to OBS'))
-    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
-
-  // Set up OBS window changer
   const obsView = new OBSView({
     config: process.env.OBS_VIEWS_CONFIG,
     obs: obs,
     db: db,
     logger: logger
   })
+
+  // Connect to OBS
+  obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
+    .then(() => {
+      logger.info('== connected to OBS')
+      obsView.updateOBS()
+    })
+    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
@@ -119,11 +163,13 @@ function getPTZCams (configFile, options = []) {
 
   function onCheerHandler (target, context, msg) {
     logger.log(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, prettySpace)}`)
+
+    // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
+    if (!obsView.inView('treat')) obsView.processChat('1treat')
+    if (cams.has('treat')) cams.get('treat').moveToShortcut('cheer')
+
+    // Process this last to ensure the auto-treat doesn't override a cheer command
     obsView.processChat(msg)
-    if (!obsView.inView('treat')) {
-      obsView.processChat('1treat')
-    }
-    cams.get('treat').moveToShortcut('cheer')
   }
 
   function onChatHandler (target, context, msg) {
@@ -147,11 +193,12 @@ function getPTZCams (configFile, options = []) {
   }
 
   function chatBot (str, context) {
-    const wordsRegex = /!(\w+)\b/gm
+    // Only process the command if the message starts with a '!'
+    if (!str.trim().startsWith('!')) return
 
-    if (str.trim().startsWith('!')) logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
 
-    const matches = str.trim().toLowerCase().match(wordsRegex)
+    const matches = str.trim().toLowerCase().match(/!(\w+)\b/gm)
     if (matches == null || obsView.cameraTimeout(context.username)) return
 
     matches.forEach(match => {
@@ -159,51 +206,59 @@ function getPTZCams (configFile, options = []) {
         // SUBSCRIBER COMMANDS
         case '!cam':
         case '!camera':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
           obsView.processChat(str)
           return
         case '!treat':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
-          cams.get('treat').command(str)
+          if (cams.has('treat')) cams.get('treat').command(str)
           return
         case '!does':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
-          cams.get('does').command(str)
+          if (cams.has('does')) cams.get('does').command(str)
           return
         case '!yard':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
-          cams.get('yard').command(str)
+          if (cams.has('yard')) cams.get('yard').command(str)
           return
         case '!kids':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
-          cams.get('kids').command(str)
+          if (cams.has('kids')) cams.get('kids').command(str)
           return
         case '!pasture':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) {
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
             return
           }
-          cams.get('pasture').command(str)
+          if (cams.has('pasture')) cams.get('pasture').command(str)
+          return
+        case '!bell':
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) return
+          logger.debug(`${context.username} is ringing the bell`)
+
+          // Automatically show the 'does' camera at the 'bell' shortcut if it's not already shown
+          if (!obsView.inView('does')) obsView.processChat('2does')
+          if (cams.has('does')) cams.get('does').moveToShortcut('bell')
           return
 
         // MOD COMMANDS
         case '!log': {
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             const words = str.trim()
               .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
               .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
@@ -218,41 +273,104 @@ function getPTZCams (configFile, options = []) {
           }
           return
         }
+        case '!admin':
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+            const words = str.trim().toLowerCase()
+              .replace(/[a-z]+[\s]+[\d]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
+              .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
+              .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+              .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
+              .split(/[\s]+/) // split on whitespace
+
+            words.forEach(cmd => {
+              if (cmd.search(/[a-z]+:[\S]+/) >= 0) {
+                const [command, value] = cmd.split(/[:]+/)
+                switch (command) {
+                  case 'add':
+                    logger.info(`Adding admin '${value}'`)
+                    admins.add(value)
+                    break
+                  case 'delete':
+                  case 'remove':
+                    logger.info(`Removing admin '${value}'`)
+                    admins.delete(value)
+                    break
+                }
+                adminStore.admins = admins
+              }
+            })
+          }
+          return
         case '!mute':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: true })
+              .then(() => chat.say(twitchChannel, 'Stream muted'))
+              .catch(e => {
+                logger.error(`Unable to mute: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Unable to mute the stream!')
+              })
           }
           return
         case '!unmute':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: false })
+              .then(() => chat.say(twitchChannel, 'Stream unmuted'))
+              .catch(e => {
+                logger.error(`Unable to unmute: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Unable to unmute the stream!')
+              })
+          }
+          return
+        case '!restartscript':
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+            triggerRestart(process.env.RESTART_FILE)
+              .then(() => logger.info(`Triggered restart and wrote file '${process.env.RESTART_FILE}'`))
+              .catch(e => logger.error(`Unable to write the restart file '${process.env.RESTART_FILE}': ${e}`))
           }
           return
         case '!stop':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
-            chat.say(twitchChannel, 'Stopping')
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
+              .then(() => chat.say(twitchChannel, 'Stream stopped'))
+              .catch(e => {
+                logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Something went wrong... unable to stop the stream')
+              })
           }
           return
         case '!start':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
-            chat.say(twitchChannel, 'Starting')
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StartStreaming')
+              .then(() => chat.say(twitchChannel, 'Stream started'))
+              .catch(e => {
+                logger.error(`Unable to start OBS: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Something went wrong... unable to start the stream')
+              })
           }
           return
         case '!restart':
-          if (context.mod || (context.badges && context.badges.broadcaster)) {
-            chat.say(twitchChannel, 'Stopping')
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
-            setTimeout(function () { chat.say(twitchChannel, ':Z Five') }, 5000)
-            setTimeout(function () { chat.say(twitchChannel, ':\\ Four') }, 6000)
-            setTimeout(function () { chat.say(twitchChannel, ';p Three') }, 7000)
-            setTimeout(function () { chat.say(twitchChannel, ':) Two') }, 8000)
-            setTimeout(function () { chat.say(twitchChannel, ':D One') }, 9000)
-            setTimeout(function () {
-              chat.say(twitchChannel, 'Starting')
-              obs.send('StartStreaming')
-            }, 10000)
+              .then(() => {
+                chat.say(twitchChannel, 'Stream stopped. Starting in...')
+                setTimeout(function () { chat.say(twitchChannel, ':Z Five') }, 5000)
+                setTimeout(function () { chat.say(twitchChannel, ':\\ Four') }, 6000)
+                setTimeout(function () { chat.say(twitchChannel, ';p Three') }, 7000)
+                setTimeout(function () { chat.say(twitchChannel, ':) Two') }, 8000)
+                setTimeout(function () { chat.say(twitchChannel, ':D One') }, 9000)
+                setTimeout(function () {
+                  obs.send('StartStreaming')
+                    .then(() => chat.say(twitchChannel, 'Stream restarted'))
+                    .catch(e => {
+                      logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, prettySpace)}`)
+                      chat.say(twitchChannel, 'Something went wrong... unable to restart the stream')
+                    })
+                }, 10000)
+              })
+              .catch(e => {
+                logger.error(`Unable to stop OBS for a restart: ${JSON.stringify(e, null, prettySpace)}`)
+                chat.say(twitchChannel, 'Something went wrong... the stream won\'t stop.')
+              })
           }
       }
     })
