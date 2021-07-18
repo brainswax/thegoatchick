@@ -1,4 +1,4 @@
-import { GoatStore } from './goatstore.mjs'
+import { Stojo } from '@codegrill/stojo'
 
 export default class OBSView {
   constructor (options) {
@@ -9,7 +9,7 @@ export default class OBSView {
     this.obs = options.obs
     this.logger = options.logger || console
 
-    this.db = options.db || new GoatStore({ logger: this.logger })
+    this.db = options.db || new Stojo({ logger: this.logger })
 
     this.storedWindows // Grab the previous window settings if they exist
       .then(windows => {
