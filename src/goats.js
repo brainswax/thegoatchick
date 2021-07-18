@@ -3,7 +3,7 @@ import OBSWebSocket from 'obs-websocket-js'
 import OBSView from './obs-view.js'
 import PTZ from './ptz.js'
 import { triggerRestart } from './autostart.mjs'
-import { GoatStore } from './goatstore.mjs'
+import { Stojo } from '@codegrill/stojo'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 
@@ -47,7 +47,7 @@ function getPTZCams (configFile, options = []) {
 class AdminStore {
   constructor (options) {
     this.logger = options.logger || console
-    this.db = options.db || new GoatStore({ logger: this.logger })
+    this.db = options.db || new Stojo({ logger: this.logger })
   }
 
   get key () {
@@ -98,7 +98,7 @@ class AdminStore {
   logger.log(`== log levels: { console: ${logger.getLogLevel(logger.level.console)}, slack: ${logger.getLogLevel(logger.level.slack)} }`)
 
   // Open and initialize the sqlite database for storing object states across restarts
-  const db = new GoatStore({ logger: logger, file: process.env.DB_FILE })
+  const db = new Stojo({ logger: logger, file: process.env.DB_FILE })
   const adminStore = new AdminStore({ logger: logger, db: db })
   const admins = await adminStore.admins
 
