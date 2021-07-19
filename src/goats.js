@@ -162,7 +162,7 @@ class AdminStore {
     .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, prettySpace)}`))
 
   function onCheerHandler (target, context, msg) {
-    logger.log(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, prettySpace)}`)
+    logger.info(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, prettySpace)}`)
 
     // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
     if (!obsView.inView('treat')) obsView.processChat('1treat')
@@ -211,41 +211,6 @@ class AdminStore {
             return
           }
           obsView.processChat(str)
-          return
-        case '!treat':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-            sayForSubs()
-            return
-          }
-          if (cams.has('treat')) cams.get('treat').command(str)
-          return
-        case '!does':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-            sayForSubs()
-            return
-          }
-          if (cams.has('does')) cams.get('does').command(str)
-          return
-        case '!yard':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-            sayForSubs()
-            return
-          }
-          if (cams.has('yard')) cams.get('yard').command(str)
-          return
-        case '!kids':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-            sayForSubs()
-            return
-          }
-          if (cams.has('kids')) cams.get('kids').command(str)
-          return
-        case '!pasture':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-            sayForSubs()
-            return
-          }
-          if (cams.has('pasture')) cams.get('pasture').command(str)
           return
         case '!bell':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) return
@@ -372,6 +337,17 @@ class AdminStore {
                 chat.say(twitchChannel, 'Something went wrong... the stream won\'t stop.')
               })
           }
+          break
+        default: {
+          const cam = match.replace(/^[!]+/, '')
+          if (cams.has(cam)) {
+            if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
+              sayForSubs()
+              return
+            }
+            cams.get(cam).command(str)
+          }
+        }
       }
     })
   }
