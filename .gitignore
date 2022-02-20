@@ -7,3 +7,4 @@ conf/*.json
 *.sqlite
 *.sqlite3
 *-journal
+~*
