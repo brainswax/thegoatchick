@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/brainswax/thegoatchick#readme",
   "dependencies": {
-    "@codegrill/stojo": "^0.1.1",
+    "@codegrill/stojo": "^0.1.2",
     "axios": "^0.21.1",
     "bluebird": "^3.7.2",
     "cross-env": "^7.0.3",
@@ -26,12 +26,12 @@
     "esm": "^3.2.25",
     "obs-websocket-js": "^3.1.0",
     "onvif": "^0.6.0",
-    "sqlite3": "^5.0.2",
+    "sqlite3": "^4.2.0",
     "tmi.js": "^1.8.3",
     "websocket": "^1.0.29"
   },
   "devDependencies": {
-    "jest": "^27.0.5",
+    "jest": "^27.3.1",
     "standard": "^16.0.3"
   }
 }
