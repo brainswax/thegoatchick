@@ -1,0 +1,12 @@
+node_modules
+res
+test
+docs
+conf
+Dockerfile
+.*
+*.log
+*restart.json
+*.sqlite*
+*-journal
+~*
