@@ -1,9 +1,12 @@
 node_modules
-npm-debug.log
+res
+test
+docs
+conf
+Dockerfile
+.*
+*.log
 *restart.json
-.env*
-conf/*.json
-*.sqlite
-*.sqlite3
+*.sqlite*
 *-journal
 ~*
