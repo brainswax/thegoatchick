@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+*restart.json
+.env*
+conf/*.json
+*.sqlite
+*.sqlite3
+*-journal
+~*
