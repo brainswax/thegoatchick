@@ -1,33 +1,25 @@
-# Import latest node.js LTS version
-FROM node:16-alpine
+# Import the base image
+FROM node:16-alpine as build
 
 # Working directory
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Copy the npm package dependencies
-COPY package*.json ./
+# Copy the source code
+COPY . .
 
-# Install python3/pip3
+# Install linux dependencies
 ENV PYTHONUNBUFFERED=1
-RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
-RUN python3 -m ensurepip
-RUN pip3 install --no-cache --upgrade pip setuptools
+RUN apk add --update --no-cache make gcc musl g++
+RUN apk add python3 --update --no-cache && ln -sf python3 /usr/bin/python
+# RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python \
+#   && python3 -m ensurepip && pip3 install --no-cache --upgrade pip setuptools
 
-# Install make
-RUN apk add --update --no-cache make
-RUN apk add --update --no-cache gcc
-RUN apk add --update --no-cache musl-dev
-RUN apk add --update --no-cache g++
-
-# Install all the packages
+# Install npm dependencies
+RUN npm install -g npm@8.5.4
+RUN npm install nodemon -g
 RUN npm install
 # If you are building your code for production
 # RUN npm ci --only=production
-
-RUN npm install nodemon -g
-
-# Include the application source code
-COPY . .
 
 # Run the app
 CMD ["npm", "start"]
