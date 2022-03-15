@@ -24,7 +24,7 @@
     "cross-env": "^7.0.3",
     "custom-env": "^2.0.1",
     "esm": "^3.2.25",
-    "obs-websocket-js": "^3.1.0",
+    "obs-websocket-js": "^4.0.3",
     "onvif": "^0.6.0",
     "sqlite3": "^4.2.0",
     "tmi.js": "^1.8.3",
