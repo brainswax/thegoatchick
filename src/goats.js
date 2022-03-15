@@ -124,13 +124,19 @@ class AdminStore {
     logger: logger
   })
 
+  obs.on('ConnectionOpened', (data) => { logger.info(`== OBS:ConnectionOpened: ${JSON.stringify(data)}`) })
+  obs.on('ConnectionClosed', (data) => { logger.info(`== OBS:ConnectionClosed: ${JSON.stringify(data)}`) })
+  obs.on('AuthenticationSuccess', (data) => { logger.info(`== OBS:AuthenticationSuccess: ${JSON.stringify(data)}`) })
+  obs.on('AuthenticationFailure', (data) => { logger.info(`== OBS:AuthenticationFailure: ${JSON.stringify(data)}`) })
+  obs.on('error', err => logger.error(`==OBS: error: ${JSON.stringify(err)}`))
+
   // Connect to OBS
   obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
     .then(() => {
       logger.info('== connected to OBS')
       obsView.updateOBS()
     })
-    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
+    .catch(err => logger.error(`OBS connection failed: ${JSON.stringify(err)}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
