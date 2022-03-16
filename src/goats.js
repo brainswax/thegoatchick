@@ -12,6 +12,7 @@ const twitchChannel = process.env.TWITCH_CHANNEL
 const prettySpace = '    ' // Used for formatting JSON in logs
 const app = {}
 app.exited = false
+app.obs = {}
 
 // Set default config file locations
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
@@ -147,6 +148,30 @@ class AdminStore {
       logger.info('== connected to OBS')
       obsView.updateOBS()
     })
+    .then(() => obs.send('GetSceneList'))
+    .then((data) => {
+      app.obs.scenes = data.scenes
+      app.obs.currentScene = data['current-scene']
+
+      // Grab all the scenes from OBS
+      logger.debug(`OBS: GetSceneList: ${JSON.stringify(data)}`)
+      logger.info(`OBS: loading scenes: ${data.scenes.map(scene => scene.name)}`)
+
+      // Grab all the sources for each scene
+      app.obs.scenes.forEach(scene => {
+        scene.sources.forEach(source => {
+          logger.info(`OBS scene '${scene.name}' source: ${source.name}, ${source.type}, ${source.render ? 'shown': 'hidden'}`)
+          logger.debug(`OBS: scene: '${scene.name}', source: ${source.name}: ${JSON.stringify(source, null, 2)}`)
+        })
+      })
+    })
+    .then(data => logger.info(`### OBS: GetSceneList: ${JSON.stringify(data)}`))
+    .then(() => obs.send('GetSceneItemList'))
+    .then(data => logger.info(`### OBS: GetSceneItemList: ${JSON.stringify(data)}`))
+    .then(() => obs.send('SetSceneItemProperties', {item: 'Venice', scale: { x: 1, y: 1 }}))
+//    .then(() => obs.send('SetSceneItemProperties', {item: 'Venice', height: 430, width: 320}))
+    .then(() => obs.send('GetSceneItemProperties', {item: 'Venice'}))
+    .then(data => logger.info(`### OBS: GetSceneItemProperties('Venice'): ${JSON.stringify(data)}`))
     .catch(err => logger.error(`OBS connection failed: ${JSON.stringify(err)}`))
 
   // ///////////////////////////////////////////////////////////////////////////
