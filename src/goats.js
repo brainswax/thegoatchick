@@ -125,7 +125,18 @@ class AdminStore {
   })
 
   obs.on('ConnectionOpened', (data) => { logger.info(`== OBS:ConnectionOpened: ${JSON.stringify(data)}`) })
-  obs.on('ConnectionClosed', (data) => { logger.info(`== OBS:ConnectionClosed: ${JSON.stringify(data)}`) })
+  obs.on('ConnectionClosed', (data) => {
+    if (process.env.OBS_RETRY !== 'false') {
+      setTimeout((data) => {
+        logger.info(`== OBS:ConnectionClosed: ${JSON.stringify(data)}`)
+        obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
+        .then(() => {
+          logger.info('== connected to OBS')
+          obsView.updateOBS()
+        })
+      }, process.env.OBS_RETRY_DELAY || 3000, data)
+    }
+  })
   obs.on('AuthenticationSuccess', (data) => { logger.info(`== OBS:AuthenticationSuccess: ${JSON.stringify(data)}`) })
   obs.on('AuthenticationFailure', (data) => { logger.info(`== OBS:AuthenticationFailure: ${JSON.stringify(data)}`) })
   obs.on('error', err => logger.error(`==OBS: error: ${JSON.stringify(err)}`))
