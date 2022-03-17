@@ -4,11 +4,9 @@ Camera control for https://www.twitch.tv/thegoatchick
 Originally based off [twitch-goat-cams](https://github.com/spencerlambert/twitch-goat-cams) developed by Farmer Spencer
 
 # Configuration
-
 The configuration consists of environment variables and configuration files located in the conf/ directory
 
 ## Environment Variables
-
 The environment variables are stored in .env files. The NODE_ENV environment variable (development, test, production) decides which .env to use. When in production, it uses the .env.production file.
 
 To change the environment, modify the start script in package.json, to something like:
