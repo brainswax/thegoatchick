@@ -10,3 +10,4 @@ Dockerfile
 *.sqlite*
 *-journal
 ~*
+_*
