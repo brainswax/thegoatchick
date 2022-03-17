@@ -4,4 +4,4 @@
 * farm: [Twin Willows Farm](http://twinwillowsfarm.net)
 
 ## Family Tree
-![Twin Willows Farm Family Tree](../res/TwinWillowsFamilyTree.png)
+![Twin Willows Farm Family Tree](/TwinWillowsFamilyTree.png)
