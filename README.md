@@ -184,3 +184,4 @@ The file is expected to be JSON with the following example format:
 The aliases are names used by the bot (and chat) to specify which camera OBS should show or hide in a particular window.
 
 Each item in the windows array will create a window in OBS and display it to the stream with the specified location and dimensions. Set the "item" field to specify which camera should default in each window.
+```
