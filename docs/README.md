@@ -1,5 +1,5 @@
 # The Goat Chick
-* twitch: [@MarysMilkMonsters](https://twitch.tv/MarysMilkMonsters)
+* twitch: [@TheGoatChick](https://twitch.tv/thegoatchick)
 * website: [thegoatchick.com](http://thegoatchick.com)
 * farm: [Twin Willows Farm](http://twinwillowsfarm.net)
 
