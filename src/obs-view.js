@@ -10,6 +10,7 @@ export default class OBSView {
     this.logger = options.logger || console
 
     this.db = options.db || new Stojo({ logger: this.logger })
+    this.scenes = {}
 
     this.storedWindows // Grab the previous window settings if they exist
       .then(windows => {
@@ -142,6 +143,57 @@ export default class OBSView {
       this.obsWindows[index].item = name
       this.changed.add(name)
     }
+  }
+
+  /**
+   * Given an obs connection, grab all the scenes and resources to construct the cams and windows
+   */
+  async syncFromObs() {
+    return this.obs.send('GetSceneList')
+      .then(async data => {
+        this.currentScene = data['current-scene']
+
+        // Grab all the scenes from OBS
+        this.logger.debug(`OBS: GetSceneList: ${JSON.stringify(data)}`)
+        this.logger.info(`OBS scenes: ${JSON.stringify(data.scenes)}`)
+
+        // For each scene, request the properties for each source
+        await Promise.all(data.scenes.map(async scene => {
+          this.scenes[scene.name] = { name: scene.name }
+          this.scenes[scene.name].sources = {}
+          this.scenes[scene.name].windows = []
+          this.scenes[scene.name].types = {}
+
+          await Promise.all(scene.sources.map(async source => {
+            // Get the type such as an image or video source
+            scene.sources.forEach(source => this.scenes[scene.name].types[source.name] = source.type)
+            
+            // Request properties for each source
+            await this.obs.send('GetSceneItemProperties', {scene: scene.name, item: source.name})
+              .then(async s => {
+                this.scenes[scene.name].sources[source.name] = s
+
+                if (s.visible /* && this.scenes[scene.name].types[scene.name] == 'dshow_input'*/) {
+                  this.scenes[scene.name].windows.push({
+                    item: s.name,
+                    position: s.position,
+                    scale: s.scale,
+                    visible: true
+                  })
+                }
+              })
+              .catch(e => this.logger.error(`Error getting scene properties: scene: ${scene}, item: ${source.name}`))
+          }))
+
+          // Sort the windows based on their position on the screen to get cam0, cam1, etc.
+          this.scenes[scene.name].windows.sort((a, b) => {
+            return a.position.x < b.position.x ? -1 : a.position.x > b.position.x ? 1 : a.position.y < b.position.y ? -1 : a.position.y > b.position.y ? 1 : 0
+          })
+        }))
+        .then(() => {
+          this.logger.info(`this.scenes: ${JSON.stringify(this.scenes, null, 2)}`)
+        })
+      })
   }
 
   /**

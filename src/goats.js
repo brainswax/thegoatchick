@@ -125,54 +125,27 @@ class AdminStore {
     logger: logger
   })
 
-  obs.on('ConnectionOpened', (data) => { logger.info(`== OBS:ConnectionOpened: ${JSON.stringify(data)}`) })
-  obs.on('ConnectionClosed', (data) => {
+  async function connectObs(obs) {
+    return obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
+      .then(() => logger.info('== connected to OBS'))
+      .then(() => obsView.syncFromObs())
+      .then(() => obsView.updateOBS())
+  }
+
+  obs.on('ConnectionOpened', () => { logger.info(`== OBS:ConnectionOpened`) })
+  obs.on('ConnectionClosed', () => {
+    logger.info(`== OBS:ConnectionClosed`)
+    // If the connection closes, retry after the timeout period
     if (process.env.OBS_RETRY !== 'false') {
-      setTimeout((data) => {
-        logger.info(`== OBS:ConnectionClosed: ${JSON.stringify(data)}`)
-        obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
-        .then(() => {
-          logger.info('== connected to OBS')
-          obsView.updateOBS()
-        })
-      }, process.env.OBS_RETRY_DELAY || 3000, data)
+      setTimeout(() => connectObs(obs), process.env.OBS_RETRY_DELAY || 3000)
     }
   })
-  obs.on('AuthenticationSuccess', (data) => { logger.info(`== OBS:AuthenticationSuccess: ${JSON.stringify(data)}`) })
+  obs.on('AuthenticationSuccess', () => { logger.info(`== OBS:AuthenticationSuccess`) })
   obs.on('AuthenticationFailure', (data) => { logger.info(`== OBS:AuthenticationFailure: ${JSON.stringify(data)}`) })
   obs.on('error', err => logger.error(`==OBS: error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
-  obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
-    .then(() => {
-      logger.info('== connected to OBS')
-      obsView.updateOBS()
-    })
-    .then(() => obs.send('GetSceneList'))
-    .then((data) => {
-      app.obs.scenes = data.scenes
-      app.obs.currentScene = data['current-scene']
-
-      // Grab all the scenes from OBS
-      logger.debug(`OBS: GetSceneList: ${JSON.stringify(data)}`)
-      logger.info(`OBS: loading scenes: ${data.scenes.map(scene => scene.name)}`)
-
-      // Grab all the sources for each scene
-      app.obs.scenes.forEach(scene => {
-        scene.sources.forEach(source => {
-          logger.info(`OBS scene '${scene.name}' source: ${source.name}, ${source.type}, ${source.render ? 'shown': 'hidden'}`)
-          logger.debug(`OBS: scene: '${scene.name}', source: ${source.name}: ${JSON.stringify(source, null, 2)}`)
-        })
-      })
-    })
-    .then(data => logger.info(`### OBS: GetSceneList: ${JSON.stringify(data)}`))
-    .then(() => obs.send('GetSceneItemList'))
-    .then(data => logger.info(`### OBS: GetSceneItemList: ${JSON.stringify(data)}`))
-    .then(() => obs.send('SetSceneItemProperties', {item: 'Venice', scale: { x: 1, y: 1 }}))
-//    .then(() => obs.send('SetSceneItemProperties', {item: 'Venice', height: 430, width: 320}))
-    .then(() => obs.send('GetSceneItemProperties', {item: 'Venice'}))
-    .then(data => logger.info(`### OBS: GetSceneItemProperties('Venice'): ${JSON.stringify(data)}`))
-    .catch(err => logger.error(`OBS connection failed: ${JSON.stringify(err)}`))
+  connectObs(obs)
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
