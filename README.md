@@ -4,7 +4,6 @@ Camera control for https://www.twitch.tv/thegoatchick
 Originally based off [twitch-goat-cams](https://github.com/spencerlambert/twitch-goat-cams) developed by Farmer Spencer
 
 # Configuration
-
 The configuration consists of environment variables and configuration files located in the conf/ directory
 
 ## Environment Variables
