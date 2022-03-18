@@ -137,7 +137,10 @@ class AdminStore {
     logger.info(`== OBS:ConnectionClosed`)
     // If the connection closes, retry after the timeout period
     if (process.env.OBS_RETRY !== 'false') {
-      setTimeout(() => connectObs(obs), process.env.OBS_RETRY_DELAY || 3000)
+      setTimeout(() => {
+        connectObs(obs)
+          .catch(e => logger.error(`Connect OBS retry failed: ${JSON.stringify(e)}`))
+      }, process.env.OBS_RETRY_DELAY || 3000)
     }
   })
   obs.on('AuthenticationSuccess', () => { logger.info(`== OBS:AuthenticationSuccess`) })
@@ -146,6 +149,7 @@ class AdminStore {
 
   // Connect to OBS
   connectObs(obs)
+    .catch(e => logger.error(`Connect OBS failed: ${JSON.stringify(e)}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
