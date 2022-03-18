@@ -12,10 +12,10 @@ const twitchChannel = process.env.TWITCH_CHANNEL
 const prettySpace = '    ' // Used for formatting JSON in logs
 const app = {}
 app.exited = false
+app.obs = {}
 
 // Set default config file locations
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
-if (!process.env.OBS_VIEWS_CONFIG || process.env.OBS_VIEWS_CONFIG === '') { process.env.OBS_VIEWS_CONFIG = '../conf/obs-views.json' }
 if (!process.env.DB_FILE || process.env.DB_FILE === '') { process.env.DB_FILE = './goatdb.sqlite3' }
 if (!process.env.APP_CONFIG || process.env.APP_CONFIG === '') { process.env.APP_CONFIG = '../conf/goats.json' }
 
@@ -118,19 +118,36 @@ class AdminStore {
   // Connect to OBS
   const obs = new OBSWebSocket()
   const obsView = new OBSView({
-    config: process.env.OBS_VIEWS_CONFIG,
     obs: obs,
     db: db,
     logger: logger
   })
 
+  async function connectObs (obs) {
+    return obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
+      .then(() => logger.info('== connected to OBS'))
+      .then(() => obsView.syncFromObs())
+      .then(() => obsView.updateOBS())
+  }
+
+  obs.on('ConnectionOpened', () => { logger.info('== OBS:ConnectionOpened') })
+  obs.on('ConnectionClosed', () => {
+    logger.info('== OBS:ConnectionClosed')
+    // If the connection closes, retry after the timeout period
+    if (process.env.OBS_RETRY !== 'false') {
+      setTimeout(() => {
+        connectObs(obs)
+          .catch(e => logger.error(`Connect OBS retry failed: ${JSON.stringify(e)}`))
+      }, process.env.OBS_RETRY_DELAY || 3000)
+    }
+  })
+  obs.on('AuthenticationSuccess', () => { logger.info('== OBS:AuthenticationSuccess') })
+  obs.on('AuthenticationFailure', (data) => { logger.info(`== OBS:AuthenticationFailure: ${JSON.stringify(data)}`) })
+  obs.on('error', err => logger.error(`==OBS: error: ${JSON.stringify(err)}`))
+
   // Connect to OBS
-  obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
-    .then(() => {
-      logger.info('== connected to OBS')
-      obsView.updateOBS()
-    })
-    .catch(err => logger.error(`OBS connection failed: ${err.code}: ${err.error}`))
+  connectObs(obs)
+    .catch(e => logger.error(`Connect OBS failed: ${JSON.stringify(e)}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras

@@ -10,20 +10,8 @@ export default class OBSView {
     this.logger = options.logger || console
 
     this.db = options.db || new Stojo({ logger: this.logger })
-
-    this.storedWindows // Grab the previous window settings if they exist
-      .then(windows => {
-        this.obsWindows = windows
-        return import(options.config || process.env.OBS_VIEWS_CONFIG)
-      })
-      .then(views => {
-        if (!this.obsWindows) this.obsWindows = views.default.windows
-        this.logger.debug(`initial windows: ${JSON.stringify(this.obsWindows, null, '  ')}`)
-
-        this.addAliases(views.default.aliases)
-        this.logger.debug(`initial aliases: ${JSON.stringify(Array.from(this.aliases.keys()))}`)
-      })
-      .catch(err => this.logger.error(`initializing windows: ${err}`))
+    this.scenes = {}
+    this.obsWindows = []
   }
 
   /**
@@ -142,6 +130,72 @@ export default class OBSView {
       this.obsWindows[index].item = name
       this.changed.add(name)
     }
+  }
+
+  /**
+   * Given an obs connection, grab all the scenes and resources to construct the cams and windows
+   */
+  async syncFromObs () {
+    // Grab all the scenes from OBS
+    return this.obs.send('GetSceneList')
+      .then(async data => {
+        this.scenes = {}
+        this.currentScene = data['current-scene']
+
+        this.logger.info(`Current OBS scene: '${this.currentScene}`)
+        this.logger.debug(`OBS: GetSceneList: ${JSON.stringify(data, null, 2)}`)
+
+        // For each scene, request the properties for each source
+        await Promise.all(data.scenes.map(async scene => {
+          this.scenes[scene.name] = { name: scene.name }
+          this.scenes[scene.name].sources = {}
+          this.scenes[scene.name].types = {}
+          this.scenes[scene.name].aliases = {}
+          this.scenes[scene.name].windows = []
+
+          if (scene.name === this.currentScene) { // TODO: grab all the scenes
+            await Promise.all(scene.sources.map(async source => {
+              // Get the type such as an image or video source
+              scene.sources.forEach(source => { this.scenes[scene.name].types[source.name] = source.type })
+
+              // Request properties for each source
+              await this.obs.send('GetSceneItemProperties', { scene: scene.name, item: source.name })
+                .then(async s => {
+                  this.scenes[scene.name].sources[source.name] = s
+
+                  if (s.visible /* && this.scenes[scene.name].types[scene.name] == 'dshow_input' */) {
+                    this.scenes[scene.name].windows.push({
+                      item: s.name,
+                      position: s.position,
+                      scale: s.scale,
+                      visible: true
+                    })
+                  }
+                })
+                .catch(e => this.logger.error(`Error getting scene properties: scene: ${scene}, item: ${source.name}`))
+            }))
+
+            // Sort the windows based on their position on the screen to get cam0, cam1, etc.
+            this.scenes[scene.name].windows.sort((a, b) => {
+              return a.position.x < b.position.x ? -1 : a.position.x > b.position.x ? 1 : a.position.y < b.position.y ? -1 : a.position.y > b.position.y ? 1 : 0
+            })
+          }
+        }))
+          .then(() => { // Should move this outside the function
+            this.scenes[this.currentScene].aliases = {}
+
+            // Just the current scene for now
+            Object.keys(this.scenes[this.currentScene].types).forEach(source => {
+              this.scenes[this.currentScene].aliases[source] = [source.toLowerCase()]
+            })
+
+            this.addAliases(this.scenes[this.currentScene].aliases)
+            this.obsWindows = this.scenes[this.currentScene].windows
+          })
+          .then(() => {
+            this.logger.info(`this.scenes: ${JSON.stringify(this.scenes, null, 2)}`)
+          })
+      })
   }
 
   /**
