@@ -20,9 +20,6 @@ export default class OBSView {
       .then(views => {
         if (!this.obsWindows) this.obsWindows = views.default.windows
         this.logger.debug(`initial windows: ${JSON.stringify(this.obsWindows, null, '  ')}`)
-
-        this.addAliases(views.default.aliases)
-        this.logger.debug(`initial aliases: ${JSON.stringify(Array.from(this.aliases.keys()))}`)
       })
       .catch(err => this.logger.error(`initializing windows: ${err}`))
   }
@@ -151,6 +148,7 @@ export default class OBSView {
   async syncFromObs() {
     return this.obs.send('GetSceneList')
       .then(async data => {
+        this.scenes = {}
         this.currentScene = data['current-scene']
 
         // Grab all the scenes from OBS
@@ -161,8 +159,8 @@ export default class OBSView {
         await Promise.all(data.scenes.map(async scene => {
           this.scenes[scene.name] = { name: scene.name }
           this.scenes[scene.name].sources = {}
-          this.scenes[scene.name].windows = []
           this.scenes[scene.name].types = {}
+          this.scenes[scene.name].windows = []
 
           await Promise.all(scene.sources.map(async source => {
             // Get the type such as an image or video source
@@ -190,6 +188,13 @@ export default class OBSView {
             return a.position.x < b.position.x ? -1 : a.position.x > b.position.x ? 1 : a.position.y < b.position.y ? -1 : a.position.y > b.position.y ? 1 : 0
           })
         }))
+        .then(() => { // Should move this outside the function
+          let aliases = {}
+          Object.keys(this.scenes).forEach(scene => {
+            Object.keys(this.scenes[scene].types).map(source => aliases[source] = [source.toLowerCase()])
+          })
+          this.addAliases(aliases)
+        })
         .then(() => {
           this.logger.info(`this.scenes: ${JSON.stringify(this.scenes, null, 2)}`)
         })
