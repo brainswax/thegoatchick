@@ -223,8 +223,8 @@ export default class OBSView {
 
     // Anything left needs to be hidden
     this.scenes[this.currentScene].changed.forEach(cam => {
-      const view = { item: cam, visible: false }
-      if (!(cam in this.scenes[this.currentScene].cams)) {
+      if (!this.scenes[this.currentScene].cams.includes(cam)) {
+        const view = { item: cam, visible: false }
         this.obs.send('SetSceneItemProperties', view)
           .then(() => this.scenes[this.currentScene].changed.delete(view.item))
           .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${err.error}`) })
