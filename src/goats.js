@@ -13,6 +13,7 @@ const prettySpace = '    ' // Used for formatting JSON in logs
 const app = {}
 app.exited = false
 app.obs = {}
+app.stream = {}
 
 // Set default config file locations
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
@@ -127,22 +128,28 @@ class AdminStore {
     return obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
       .then(() => logger.info('== connected to OBS'))
       .then(() => obsView.syncFromObs())
-      .then(() => obsView.updateOBS())
   }
 
-  obs.on('ConnectionOpened', () => { logger.info('== OBS:ConnectionOpened') })
+  obs.on('ConnectionOpened', () => { logger.info('== OBS: ConnectionOpened') })
   obs.on('ConnectionClosed', () => {
-    logger.info('== OBS:ConnectionClosed')
+    logger.info('== OBS: ConnectionClosed')
     // If the connection closes, retry after the timeout period
     if (process.env.OBS_RETRY !== 'false') {
       setTimeout(() => {
         connectObs(obs)
+          .then(() => obs.send('GetVideoInfo'))
+          .then((info) => {
+            // Need the info to get the stream resolution
+            app.stream.info = info
+            logger.info(`Stream Base Resolution: ${app.stream.info.baseWidth}x${app.stream.info.baseHeight}, Output Resolution: ${app.stream.info.outputWidth}x${app.stream.info.outputHeight}`)
+            logger.debug(`Video Info: ${JSON.stringify(info, null, 2)}`)
+          })
           .catch(e => logger.error(`Connect OBS retry failed: ${JSON.stringify(e)}`))
       }, process.env.OBS_RETRY_DELAY || 3000)
     }
   })
-  obs.on('AuthenticationSuccess', () => { logger.info('== OBS:AuthenticationSuccess') })
-  obs.on('AuthenticationFailure', (data) => { logger.info(`== OBS:AuthenticationFailure: ${JSON.stringify(data)}`) })
+  obs.on('AuthenticationSuccess', () => { logger.info('== OBS: AuthenticationSuccess') })
+  obs.on('AuthenticationFailure', (data) => { logger.info(`== OBS: AuthenticationFailure: ${JSON.stringify(data)}`) })
   obs.on('error', err => logger.error(`==OBS: error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
