@@ -1,5 +1,6 @@
 import { Cam } from 'onvif'
 import { Stojo } from '@codegrill/stojo'
+import crypto from 'crypto'
 
 const panRegex = /(p|pan|right|left|r|l) ?(\+|-)? ?([0-9]{1,3})/m
 const tiltRegex = /(t|tilt|down|up|d|u) ?(\+|-)? ?([0-9]{1,3})/m
@@ -18,13 +19,14 @@ export default class PTZ {
     this.db = options.db || new Stojo({ logger: this.logger })
     this.data = {}
 
+    this.logger.info(`== connecting to PTZ camera host: ${options.hostname}, user: ${options.username}, hash: ${crypto.createHash('sha256').update(options.password).digest('base64')}`)
     this.cam = new Cam({
       hostname: options.hostname,
       username: options.username,
       password: options.password
     }, err => {
-      if (err) this.logger.warn(`failed to connect to camera '${this.name}': ${err}`)
-      else this.logger.info(`connected to camera: ${this.name}`)
+      if (err) this.logger.warn(`== failed to connect to PTZ camera '${this.name}': ${err}`)
+      else this.logger.info(`== connected to PTZ camera '${this.name}'`)
     })
 
     this.storedPosition
