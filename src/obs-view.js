@@ -124,7 +124,6 @@ export default class OBSView {
         this.currentScene = data['current-scene']
 
         this.logger.info(`Current OBS scene: '${this.currentScene}`)
-        this.logger.debug(`OBS: GetSceneList: ${JSON.stringify(data, null, 2)}`)
 
         // For each scene, request the properties for each source
         await Promise.all(data.scenes.map(async scene => {
@@ -217,17 +216,18 @@ export default class OBSView {
       if (this.scenes[this.currentScene].changed.has(window.item)) {
         this.obs.send('SetSceneItemProperties', window)
           .then(() => this.scenes[this.currentScene].changed.delete(window.item))
-          .catch(err => { this.logger.warn(`unable to update OBS view '${window.item}': ${err.error}`) })
+          .catch(err => { this.logger.warn(`Unable to set OBS properties '${window.item}' for scene '${this.currentScene}': ${JSON.stringify(err)}`) })
       }
     })
 
     // Anything left needs to be hidden
     this.scenes[this.currentScene].changed.forEach(cam => {
       if (!this.scenes[this.currentScene].cams.includes(cam)) {
-        const view = { item: cam, visible: false }
-        this.obs.send('SetSceneItemProperties', view)
-          .then(() => this.scenes[this.currentScene].changed.delete(view.item))
-          .catch(err => { this.logger.warn(`unable to hide OBS view '${cam}': ${err.error}`) })
+        const view = { source: cam, render: false }
+        view['scene-name'] = this.currentScene
+        this.obs.send('SetSceneItemRender', view)
+          .then(() => this.scenes[this.currentScene].changed.delete(cam))
+          .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${this.currentScene}': ${err.error}`) })
       }
     })
 
