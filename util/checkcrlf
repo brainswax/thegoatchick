@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+const fs = require('fs')
+
+;(() => {
+   if (process.argv.length > 2) {
+      console.log(JSON.stringify(process.argv))
+
+      fs.readFile(process.argv[2], 'utf8', (err, data) => {
+         if (err) throw err
+         if (data.includes('\r\n')) console.log('The file contains a crlf')
+         else if (data.includes('\r')) console.log('The file contains a cr without an lf')
+         else console.log('No carriage returns found')
+      })
+   }
+})()
