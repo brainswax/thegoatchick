@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+const crypto = require('crypto')
+
+;(() => {
+const hasher = crypto.createHash('sha256')
+  for (let i = 2; i < process.argv.length; i++) {
+    hasher.update(process.argv[i])
+  }
+  console.log(hasher.digest('base64'))
+})()
