@@ -6,6 +6,7 @@ import { triggerRestart } from './autostart.mjs'
 import { Stojo } from '@codegrill/stojo'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
+import crypto from 'crypto'
 
 cenv.env(process.env.NODE_ENV)
 const twitchChannel = process.env.TWITCH_CHANNEL
@@ -13,6 +14,7 @@ const prettySpace = '    ' // Used for formatting JSON in logs
 const app = {}
 app.exited = false
 app.obs = {}
+app.obs.retries = 0
 app.stream = {}
 app.shutdown = []
 
@@ -76,11 +78,11 @@ class AdminStore {
 ;(async () => {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
-  function shutdown () {
-    app.shutdown.forEach(f => {
-      try { f() }
-      catch { logger.error("Error shutting something down!")}
-    })
+  async function shutdown () {
+    await Promise.all(app.shutdown.map(async f => {
+      try { await f() } catch { logger.error('Error shutting something down!') }
+    }))
+    process.exit(1)
   }
 
   process.on('SIGTERM', () => {
@@ -120,7 +122,7 @@ class AdminStore {
   // Open and initialize the sqlite database for storing object states across restarts
   const db = new Stojo({ logger: logger, file: process.env.DB_FILE })
   app.shutdown.push(() => {
-    logger.info('=== Shutting down the local database...')
+    logger.info('== Shutting down the local database...')
     db.close()
   })
   const adminStore = new AdminStore({ logger: logger, db: db })
@@ -141,8 +143,8 @@ class AdminStore {
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
   const obs = new OBSWebSocket()
-  app.shutdown.push(() => {
-    logger.info('=== Shutting down OBS...')
+  app.shutdown.push(async () => {
+    logger.info('== Shutting down OBS...')
     obs.disconnect()
   })
   const obsView = new OBSView({
@@ -152,16 +154,24 @@ class AdminStore {
   })
 
   async function connectObs (obs) {
+    logger.info(`== connecting to OBS host:${process.env.OBS_ADDRESS}, hash: ${crypto.createHash('sha256').update(process.env.OBS_PASSWORD).digest('base64')}`)
     return obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
-      .then(() => logger.info('== connected to OBS'))
+      .then(() => {
+        app.obs.retries = 0 // Reset for the next disconnect
+        logger.info('== connected to OBS')
+      })
       .then(() => obsView.syncFromObs())
   }
 
-  obs.on('ConnectionOpened', () => { logger.info('== OBS: ConnectionOpened') })
+  obs.on('ConnectionOpened', () => {
+    logger.info('== OBS connection opened')
+  })
   obs.on('ConnectionClosed', () => {
-    logger.info('== OBS: ConnectionClosed')
+    logger.info('== OBS connection closed')
     // If the connection closes, retry after the timeout period
     if (process.env.OBS_RETRY !== 'false') {
+      const delay = Math.round((process.env.OBS_RETRY_DELAY || 3000) * ((process.env.OBS_RETRY_DECAY || 1.2) ** app.obs.retries++))
+      logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
         connectObs(obs)
           .then(() => obs.send('GetVideoInfo'))
@@ -171,17 +181,17 @@ class AdminStore {
             logger.info(`Stream Base Resolution: ${app.stream.info.baseWidth}x${app.stream.info.baseHeight}, Output Resolution: ${app.stream.info.outputWidth}x${app.stream.info.outputHeight}`)
             logger.debug(`Video Info: ${JSON.stringify(info, null, 2)}`)
           })
-          .catch(e => logger.error(`Connect OBS retry failed: ${JSON.stringify(e)}`))
-      }, process.env.OBS_RETRY_DELAY || 3000)
+          .catch(e => logger.error(`Connect OBS retry failed: ${e.error}`))
+      }, delay)
     }
   })
-  obs.on('AuthenticationSuccess', () => { logger.info('== OBS: AuthenticationSuccess') })
-  obs.on('AuthenticationFailure', (data) => { logger.info(`== OBS: AuthenticationFailure: ${JSON.stringify(data)}`) })
-  obs.on('error', err => logger.error(`==OBS: error: ${JSON.stringify(err)}`))
+  obs.on('AuthenticationSuccess', () => { logger.info('== OBS successfully authenticated') })
+  obs.on('AuthenticationFailure', () => { logger.info('== OBS failed authentication') })
+  obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
   connectObs(obs)
-    .catch(e => logger.error(`Connect OBS failed: ${JSON.stringify(e)}`))
+    .catch(e => logger.error(`Connect OBS failed: ${e.error}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
@@ -200,9 +210,9 @@ class AdminStore {
     maxReconnectAttempts: process.env.TWITCH_RECONNECT_TRIES,
     channels: [twitchChannel]
   })
-  app.shutdown.push(() => {
-    logger.info('=== Shutting down twitch...')
-    chat.disconnect()
+  app.shutdown.push(async () => {
+    logger.info('== Shutting down twitch...')
+    await chat.disconnect()
   })
 
   chat.on('cheer', onCheerHandler)
@@ -211,7 +221,8 @@ class AdminStore {
   chat.on('disconnected', onDisconnectedHandler)
   chat.on('reconnect', () => { logger.info('== reconnecting to twitch') })
 
-  // Connect to Twitch:
+  // Connect to Twitch
+  logger.info(`== connecting to twitch: ${process.env.TWITCH_USER}@${twitchChannel}`)
   chat.connect()
     .then(() => logger.info(`== connected to twitch channel: ${process.env.TWITCH_USER}@${twitchChannel}`))
     .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, prettySpace)}`))
