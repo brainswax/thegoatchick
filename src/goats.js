@@ -14,6 +14,7 @@ const app = {}
 app.exited = false
 app.obs = {}
 app.stream = {}
+app.shutdown = []
 
 // Set default config file locations
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
@@ -75,11 +76,29 @@ class AdminStore {
 ;(async () => {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
+  function shutdown () {
+    app.shutdown.forEach(f => {
+      try { f() }
+      catch { logger.error("Error shutting something down!")}
+    })
+  }
+
+  process.on('SIGTERM', () => {
+    console.log('\nSIGTERM received.')
+    shutdown()
+  })
+  process.on('SIGINT', () => {
+    console.log('\nSIGINT received.')
+    shutdown()
+  })
+  process.on('SIGBREAK', () => {
+    console.log('\nSIGBREAK received.')
+    shutdown()
+  })
   process.on('beforeExit', (code) => {
     if (!app.exited) {
       app.exited = true
       logger.info(`== about to exit with code: ${code}`)
-      db.close()
     }
   })
   process.on('uncaughtException', (err, origin) => {
@@ -100,6 +119,10 @@ class AdminStore {
 
   // Open and initialize the sqlite database for storing object states across restarts
   const db = new Stojo({ logger: logger, file: process.env.DB_FILE })
+  app.shutdown.push(() => {
+    logger.info('=== Shutting down the local database...')
+    db.close()
+  })
   const adminStore = new AdminStore({ logger: logger, db: db })
   const admins = await adminStore.admins
 
@@ -118,6 +141,10 @@ class AdminStore {
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to OBS
   const obs = new OBSWebSocket()
+  app.shutdown.push(() => {
+    logger.info('=== Shutting down OBS...')
+    obs.disconnect()
+  })
   const obsView = new OBSView({
     obs: obs,
     db: db,
@@ -159,7 +186,7 @@ class AdminStore {
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
   const cams = await getPTZCams(process.env.PTZ_CONFIG, { logger: logger, db: db })
-    .then((cams) => { logger.info('== loaded cameras'); return cams })
+    .then(() => logger.info('== loaded cameras'))
     .catch(err => logger.error(`== loading cameras: ${err}`))
 
   // ///////////////////////////////////////////////////////////////////////////
@@ -172,6 +199,10 @@ class AdminStore {
     connection: { reconnect: process.env.TWITCH_RECONNECT !== 'false' },
     maxReconnectAttempts: process.env.TWITCH_RECONNECT_TRIES,
     channels: [twitchChannel]
+  })
+  app.shutdown.push(() => {
+    logger.info('=== Shutting down twitch...')
+    chat.disconnect()
   })
 
   chat.on('cheer', onCheerHandler)
