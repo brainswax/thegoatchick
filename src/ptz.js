@@ -225,6 +225,7 @@ export default class PTZ {
     if (shortcut === '*') { // delete all shortcuts
       this.logger.log(`deleting all shortcuts: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts)} }`)
       this.data.shortcuts = {}
+      this.storedShortcuts = this.data.shortcuts
     } else if (shortcut && this.data.shortcuts[shortcut]) {
       this.logger.log(`deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
       delete this.data.shortcuts[shortcut]
