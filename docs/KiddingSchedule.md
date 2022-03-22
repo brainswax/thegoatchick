@@ -11,7 +11,7 @@ This is only a high level overview, so I highly recommend reading more detailed 
 
 ## Preparing For Birth
 1. The gestation period is 150 days for standard goats and 145 days for miniature breeds. Birth is usually within a day or two of that, but like humans can happen earlier or later.
-1. Identifying labor.
+1. Identifying labor:
   * The broad sacrotuberous ligaments on either side of her rump will loosen and can be felt.
   * The udder fills and gets tight.
   * The doe will seek a safe space to birth away from other goats.
@@ -88,8 +88,8 @@ This is only a high level overview, so I highly recommend reading more detailed 
 1. Can be weaned as early as 8 weeks.
 1. Don't wean till they start drinking water and eating hay/grain regularly.
 1. To Wean:
-  1. Reduce bottle to once a day for 2 weeks.
-  1. Cut out bottle feeding after - they will complain.
+  * Reduce bottle to once a day for 2 weeks.
+  * Cut out bottle feeding after - they will complain.
 
 ## 12 Weeks
 1. Tattoo registered goats.
