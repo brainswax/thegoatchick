@@ -14,6 +14,8 @@ const prettySpace = '    ' // Used for formatting JSON in logs
 const app = {}
 app.exited = false
 app.obs = {}
+app.ptz = {}
+app.ptz.names = []
 app.obs.retries = 0
 app.stream = {}
 app.shutdown = []
@@ -38,6 +40,7 @@ function getPTZCams (configFile, options = []) {
       const c = new Map()
       // This assumes that the camera options are under the "cams" entry in the JSON file
       for (const [key, value] of Object.entries(conf.default.cams)) {
+        app.ptz.names.push(key.toLocaleLowerCase())
         value.name = key
         Object.assign(value, options)
         c.set(key, new PTZ(value))
@@ -286,6 +289,19 @@ class AdminStore {
           if (!obsView.inView('does')) obsView.processChat('2does')
           if (cams.has('does')) cams.get('does').moveToShortcut('bell')
           return
+
+        case '!cams': {
+          const sources = obsView.getSources().map(s => app.ptz.names.includes(s) ? `${s} (ptz)` : s)
+          // Put PTZ cams first, then sort alphabetically
+          sources.sort((a, b) => {
+            if (a.includes('ptz') && !b.includes('ptz')) return -1
+            else if (!a.includes('ptz') && b.includes('ptz')) return 1
+            else if (a === b) return 0
+            else return a < b ? -1 : 1
+          })
+          if (sources.length > 0) chat.say(twitchChannel, `Available cams: ${sources.join(', ')}`)
+          else chat.say(twitchChannel, 'No cams currently available')
+        }
 
         // MOD COMMANDS
         case '!log': {

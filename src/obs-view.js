@@ -40,6 +40,27 @@ export default class OBSView {
   }
 
   /**
+   * Gets an array of OBS sources by type
+   * @param types the OBS source type
+   * @returns array of source names
+  */
+  getSources (types = ['dshow_input', 'monitor_capture', 'window_capture']) {
+    let sources = []
+
+    if (this.currentScene && this.scenes[this.currentScene]) {
+      this.logger.debug(`### getSources: ${JSON.stringify(Object.values(this.scenes[this.currentScene].sources), null, 2)}`)
+
+      Object.values(this.scenes[this.currentScene].sources).forEach(source => {
+        if (types.includes(source.type)) {
+          sources.push(source.name.toLowerCase())
+        }
+      })
+    }
+
+    return sources
+  }
+
+  /**
   Takes a chat message and parses it into zero or more set window commands
   @param msg the message from chat
   @return an array of zero or more dictionaries of the format: { index: Number, name: String }
@@ -79,8 +100,7 @@ export default class OBSView {
     if (this.currentScene && this.scenes[this.currentScene]) {
       this.parseChatCommands(msg).forEach(c => { this.setWindow(c.index, c.name) })
       this.updateOBS()
-    }
-    else {
+    } else {
       this.logger.warn('Chat command cannot be processed because OBS has not been loaded yet')
     }
   }
