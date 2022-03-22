@@ -2,7 +2,7 @@
 
 This is a quick start guide to kidding baby goats.
 
-This is only a high level overview, so I highly recommend reading more detailed information from Erica Hopkins' book [The Goat Chick: How To Get Started Raising Goats](https://www.amazon.com/Goat-Chick-Started-Raising-Goats-ebook/dp/B07BD3B7L3/) and her website [thegoatchick.com](http://www.thegoatchick.com/kidding.html).
+This is only a high level overview, so I highly recommend reading more detailed information from Erica Hopkins' book [The Goat Chick: How To Get Started Raising Goats](https://www.amazon.com/Goat-Chick-Started-Raising-Goats-ebook/dp/B07BD3B7L3/) and her website [thegoatchick.com](http://www.thegoatchick.com/kidding.html). This page is largely a summary of Erica's content and meant as a summary for myself to learn.
 
 # The Doe
 ## 4 Weeks Before Kidding
