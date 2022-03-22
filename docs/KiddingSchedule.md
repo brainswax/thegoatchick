@@ -2,17 +2,18 @@
 
 This is a quick start guide to kidding baby goats.
 
-This is only a high level overview, so I highly recommend reading more detailed information from Erica Hopkins' book [The Goat Chick: How To Get Started Raising Goats](https://www.amazon.com/Goat-Chick-Started-Raising-Goats-ebook/dp/B07BD3B7L3/) and her website [thegoatchick.com](http://www.thegoatchick.com/kidding.html). This page is largely a summary of Erica's content and meant as a summary for myself to learn.
+This is only a high level overview, so I highly recommend reading more detailed information from Erica Hopkins' book [The Goat Chick: How To Get Started Raising Goats](https://www.amazon.com/Goat-Chick-Started-Raising-Goats-ebook/dp/B07BD3B7L3/) and her website [thegoatchick.com](http://www.thegoatchick.com/kidding.html). This page is largely a summary of Erica's content and meant as a summary for myself to learn. See [additional resources](#additional-resources) at the end.
 
 # The Doe
 ## 4 Weeks Before Kidding
 1. Selenium supplement.
 1. Trim hooves.
+1. Watch for [ketosis](https://goats.extension.org/goat-ketosis/), especially if the doe has many kids or is very large.
 
 ## Preparing For Birth
 1. The gestation period is 150 days for standard goats and 145 days for miniature breeds. Birth is usually within a day or two of that, but like humans can happen earlier or later.
 1. Identifying labor:
-  * The broad sacrotuberous ligaments on either side of her rump will loosen and can be felt.
+  * The broad sacrotuberous ligaments on either side of her rump will loosen and can be felt. Feels like a pencil when firm.
   * The udder fills and gets tight.
   * The doe will seek a safe space to birth away from other goats.
 1. When getting close to the due date, check the ligaments and udder often, multiple times daily.
@@ -34,7 +35,8 @@ This is only a high level overview, so I highly recommend reading more detailed 
   * This should happen 45-60 minutes after the last kid is born.
 1. DO NOT PULL THE PLACENTA
 1. You can allow the doe to eat the placenta to recover nutrients.
-1. If she doesn't pass the placenta after 2 hours, it's possible she has a retained placenta, but technically not for 12 hours. This is usually due to selenium deficiency.
+1. If she doesn't pass the placenta after 2 hours, it's possible she has a retained placenta, but technically not for 12 hours.
+  * This is usually due to [selenium deficiency](https://goats.extension.org/goat-nutrition-selenium/).
 
 ## Immediately After Birth
 1. In case of dystocia, administer antibiotics (Oxytetracycline) into the uterus through cervix.
@@ -94,3 +96,7 @@ This is only a high level overview, so I highly recommend reading more detailed 
 ## 12 Weeks
 1. Tattoo registered goats.
 1. Castrate bucks.
+
+# Additional Resources
+* [Goats Extension Foundation](https://goats.extension.org/) especially for the [Goat Nutrition Minerals](https://goats.extension.org/goat-nutrition-minerals/) section.
+* [Cattle Estrous Cycle](https://www.fda.gov/animal-veterinary/product-safety-information/cattle-estrous-cycle-and-fda-approved-animal-drugs-control-and-synchronize-estrus-resource-producers) on the FDA website.
