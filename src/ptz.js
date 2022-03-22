@@ -10,6 +10,16 @@ function coordsEqual (c1, c2) {
   return c1.pan === c2.pan & c1.tilt === c2.tilt & c1.zoom === c2.zoom
 }
 
+class NullChat {
+  constructor (options) {
+    this.logger = options.logger || console
+  }
+
+  say (channel, message) {
+    this.logger.warn(`No chat established to respond on channel '${this.channel || 'unknown'}': ${message}`)
+  }
+}
+
 export default class PTZ {
   constructor (options) {
     this.name = options.name || 'unnamed'
@@ -20,6 +30,8 @@ export default class PTZ {
     this.data = {}
 
     this.logger.info(`== connecting to PTZ camera host: ${options.hostname}, user: ${options.username}, hash: ${crypto.createHash('sha256').update(options.password).digest('base64')}`)
+    this.chat = options.chat || new NullChat({ logger: this.logger })
+    this.channel = options.channel
     this.cam = new Cam({
       hostname: options.hostname,
       username: options.username,
@@ -48,9 +60,9 @@ export default class PTZ {
     this.commands.set('s', (...args) => this.saveShortcut(...args))
     this.commands.set('delete', (...args) => this.deleteShortcut(...args))
     this.commands.set('d', (...args) => this.deleteShortcut(...args))
-    this.commands.set('show', (...args) => this.showShortcut(...args))
     this.commands.set('info', (...args) => this.showShortcut(...args))
     this.commands.set('i', (...args) => this.showShortcut(...args))
+    this.commands.set('shortcuts', (...args) => this.showShortcut(...args))
   }
 
   /**
@@ -202,24 +214,33 @@ export default class PTZ {
   }
 
   saveShortcut (shortcut) {
-    this.logger.log(`saving shortcut: { camera: '${this.name}', shortcut: ${JSON.stringify(shortcut)}, coords: ${JSON.stringify(this.data.coords)} }`)
-    this.data.shortcuts[shortcut] = JSON.parse(JSON.stringify(this.data.coords)) // deep copy
-    this.storedShortcuts = this.data.shortcuts
+    if (shortcut && shortcut !== '*') {
+      this.logger.log(`saving shortcut: { camera: '${this.name}', shortcut: ${JSON.stringify(shortcut)}, coords: ${JSON.stringify(this.data.coords)} }`)
+      this.data.shortcuts[shortcut] = JSON.parse(JSON.stringify(this.data.coords)) // deep copy
+      this.storedShortcuts = this.data.shortcuts
+    }
   }
 
   deleteShortcut (shortcut) {
-    this.logger.log(`deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
-    delete this.data.shortcuts[shortcut]
-    this.storedShortcuts = this.data.shortcuts
+    if (shortcut === '*') { // delete all shortcuts
+      this.logger.log(`deleting all shortcuts: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts)} }`)
+      this.data.shortcuts = {}
+    } else if (shortcut && this.data.shortcuts[shortcut]) {
+      this.logger.log(`deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
+      delete this.data.shortcuts[shortcut]
+      this.storedShortcuts = this.data.shortcuts
+    } else if (shortcut) this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
   }
 
   showShortcut (shortcut) {
-    if (shortcut === '*') {
-      this.logger.info(`show all: { camera: '${this.name}', shortcuts: ${JSON.stringify(this.data.shortcuts, null, '  ')}}`)
-    }
-    if (this.data.shortcuts[shortcut]) {
+    if (!shortcut || shortcut === '*') {
+      const snames = Object.keys(this.data.shortcuts)
+      if (snames.length === 0) this.chat.say(this.channel, `There are no shortcuts for ${this.name}`)
+      else this.chat.say(this.channel, `${this.name} shortcuts: ${snames.join(', ')}`)
+    } else if (this.data.shortcuts[shortcut]) {
+      this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
       this.logger.info(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
-    }
+    } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
   }
 
   /**
@@ -239,20 +260,16 @@ export default class PTZ {
     if (cmd.search(panRegex) >= 0 || cmd.search(tiltRegex) >= 0 || cmd.search(zoomRegex) >= 0) {
       this.logger.debug(`move camera '${this.name}': ${cmd}`)
       this.applyMove(cmd)
-    } else if (cmd.search(/[a-z]+:[\S]+/) >= 0) {
+    } else {
       this.logger.debug(`command camera '${this.name}': ${cmd}`)
       this.applyCommand(cmd)
-    } else if (this.data.shortcuts[cmd]) {
-      this.logger.debug(`shortcut camera '${this.name}': ${cmd}`)
-      this.data.coords = JSON.parse(JSON.stringify(this.data.shortcuts[cmd]))
-    } else {
-      this.logger.debug(`camera command ignored '${this.name}': ${cmd}`)
     }
   }
 
   applyCommand (cmd) {
     const [command, shortcut] = cmd.split(/[:]+/)
     if (this.commands.has(command)) this.commands.get(command)(shortcut)
+    else if (this.commands.has(cmd)) this.commands.get(cmd)('*')
   }
 
   applyMove (cmd) {

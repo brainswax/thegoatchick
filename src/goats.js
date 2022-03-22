@@ -26,16 +26,18 @@ Get the PTZ config and connect to the cameras
 @param configFile the name of the JSON config file with the camera options
 @return a promise to a Map of camera names to instances
 */
-async function getPTZCams (map, names, configFile, options = []) {
+async function getPTZCams (map, names, chat, channel, configFile, options = []) {
   return import(configFile)
     .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
     .then(conf => {
       // This assumes that the camera options are under the "cams" entry in the JSON file
       for (const [key, value] of Object.entries(conf.default.cams)) {
-        names.push(key.toLocaleLowerCase())
         value.name = key
+        value.chat = chat
+        value.channel = channel
         Object.assign(value, options)
         map.set(key, new PTZ(value))
+        names.push(key.toLocaleLowerCase())
       }
     })
 }
@@ -201,12 +203,6 @@ class AdminStore {
     .catch(e => logger.error(`Connect OBS failed: ${e.error}`))
 
   // ///////////////////////////////////////////////////////////////////////////
-  // Load the PTZ cameras
-  await getPTZCams(app.ptz.cams, app.ptz.names, process.env.PTZ_CONFIG, { logger: logger, db: db })
-    .then(() => logger.info('== loaded cameras'))
-    .catch(err => logger.error(`== error loading cameras: ${err}`))
-
-  // ///////////////////////////////////////////////////////////////////////////
   // Connect to twitch
   const chat = new tmi.Client({
     identity: {
@@ -227,6 +223,12 @@ class AdminStore {
   chat.on('connected', onConnectedHandler)
   chat.on('disconnected', onDisconnectedHandler)
   chat.on('reconnect', () => { logger.info('== reconnecting to twitch') })
+
+  // ///////////////////////////////////////////////////////////////////////////
+  // Load the PTZ cameras
+  await getPTZCams(app.ptz.cams, app.ptz.names, chat, twitchChannel, process.env.PTZ_CONFIG, { logger: logger, db: db })
+    .then(() => logger.info('== loaded cameras'))
+    .catch(err => logger.error(`== error loading cameras: ${err}`))
 
   // Connect to Twitch
   logger.info(`== connecting to twitch: ${process.env.TWITCH_USER}@${twitchChannel}`)
