@@ -48,8 +48,6 @@ export default class OBSView {
     const sources = []
 
     if (this.currentScene && this.scenes[this.currentScene]) {
-      this.logger.debug(`### getSources: ${JSON.stringify(Object.values(this.scenes[this.currentScene].sources), null, 2)}`)
-
       Object.values(this.scenes[this.currentScene].sources).forEach(source => {
         if (types.includes(source.type)) {
           sources.push(source.name.toLowerCase())
@@ -152,7 +150,7 @@ export default class OBSView {
         this.scenes = {}
         this.currentScene = data['current-scene']
 
-        this.logger.info(`Current OBS scene: '${this.currentScene}`)
+        this.logger.info(`Current OBS scene: '${this.currentScene}'`)
 
         // For each scene, request the properties for each source
         await Promise.all(data.scenes.map(async scene => {
@@ -200,6 +198,7 @@ export default class OBSView {
           }
         }))
           .then(() => {
+            this.logger.info(`Loaded OBS scenes: '${Object.keys(this.scenes).join('\', \'')}'`)
             this.logger.debug(`OBS Scenes: ${JSON.stringify(this.scenes, null, 2)}`)
           })
       })
