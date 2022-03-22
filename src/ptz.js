@@ -129,7 +129,7 @@ export default class PTZ {
           x: this.calcPan(coords.pan),
           y: this.calcTilt(coords.tilt),
           zoom: this.calcZoom(coords.zoom)
-        }, (err) => this.logger.warn(`unable to move camera ${this.name}: ${err}`))
+        }, (err) => { if (err) this.logger.warn(`unable to move camera ${this.name}: ${err}`) })
       } else {
         this.logger.info(`unable to move offline camera '${this.name}'`)
       }
