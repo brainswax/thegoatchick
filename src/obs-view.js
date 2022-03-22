@@ -45,7 +45,7 @@ export default class OBSView {
    * @returns array of source names
   */
   getSources (types = ['dshow_input', 'monitor_capture', 'window_capture']) {
-    let sources = []
+    const sources = []
 
     if (this.currentScene && this.scenes[this.currentScene]) {
       this.logger.debug(`### getSources: ${JSON.stringify(Object.values(this.scenes[this.currentScene].sources), null, 2)}`)
