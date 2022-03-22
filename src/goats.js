@@ -11,12 +11,6 @@ import crypto from 'crypto'
 cenv.env(process.env.NODE_ENV)
 const twitchChannel = process.env.TWITCH_CHANNEL
 const prettySpace = '    ' // Used for formatting JSON in logs
-const app = {}
-app.exited = false
-app.obs = {}
-app.obs.retries = 0
-app.stream = {}
-app.shutdown = []
 
 // Set default config file locations
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
@@ -32,20 +26,18 @@ Get the PTZ config and connect to the cameras
 @param configFile the name of the JSON config file with the camera options
 @return a promise to a Map of camera names to instances
 */
-function getPTZCams (configFile, options = []) {
+async function getPTZCams (map, names, configFile, options = []) {
   return import(configFile)
+    .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
     .then(conf => {
-      const c = new Map()
       // This assumes that the camera options are under the "cams" entry in the JSON file
       for (const [key, value] of Object.entries(conf.default.cams)) {
+        names.push(key.toLocaleLowerCase())
         value.name = key
         Object.assign(value, options)
-        c.set(key, new PTZ(value))
+        map.set(key, new PTZ(value))
       }
-
-      return c
     })
-    .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
 }
 
 class AdminStore {
@@ -76,13 +68,24 @@ class AdminStore {
 }
 
 ;(async () => {
+  const app = {}
+  app.exited = false
+  app.obs = {}
+  app.ptz = {}
+  app.ptz.names = []
+  app.ptz.cams = new Map()
+  app.obs.retries = 0
+  app.stream = {}
+  app.shutdown = []
+
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
   async function shutdown () {
+    app.exited = true
     await Promise.all(app.shutdown.map(async f => {
       try { await f() } catch { logger.error('Error shutting something down!') }
     }))
-    process.exit(1)
+    setTimeout(() => process.exit(1), 0) // push it back on the event loop
   }
 
   process.on('SIGTERM', () => {
@@ -95,6 +98,10 @@ class AdminStore {
   })
   process.on('SIGBREAK', () => {
     console.log('\nSIGBREAK received.')
+    shutdown()
+  })
+  process.on('SIGHUP', () => {
+    console.log('\nSIGHUP received.')
     shutdown()
   })
   process.on('beforeExit', (code) => {
@@ -169,7 +176,7 @@ class AdminStore {
   obs.on('ConnectionClosed', () => {
     logger.info('== OBS connection closed')
     // If the connection closes, retry after the timeout period
-    if (process.env.OBS_RETRY !== 'false') {
+    if (process.env.OBS_RETRY !== 'false' && !app.exited) {
       const delay = Math.round((process.env.OBS_RETRY_DELAY || 3000) * ((process.env.OBS_RETRY_DECAY || 1.2) ** app.obs.retries++))
       logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
@@ -195,9 +202,9 @@ class AdminStore {
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
-  const cams = await getPTZCams(process.env.PTZ_CONFIG, { logger: logger, db: db })
+  await getPTZCams(app.ptz.cams, app.ptz.names, process.env.PTZ_CONFIG, { logger: logger, db: db })
     .then(() => logger.info('== loaded cameras'))
-    .catch(err => logger.error(`== loading cameras: ${err}`))
+    .catch(err => logger.error(`== error loading cameras: ${err}`))
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to twitch
@@ -232,7 +239,7 @@ class AdminStore {
 
     // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
     if (!obsView.inView('treat')) obsView.processChat('1treat')
-    if (cams.has('treat')) cams.get('treat').moveToShortcut('cheer')
+    if (app.ptz.cams.has('treat')) app.ptz.cams.get('treat').moveToShortcut('cheer')
 
     // Process this last to ensure the auto-treat doesn't override a cheer command
     obsView.processChat(msg)
@@ -262,7 +269,8 @@ class AdminStore {
     // Only process the command if the message starts with a '!'
     if (!str.trim().startsWith('!')) return
 
-    logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    logger.info(`Message from ${context.username}: ${str}`)
+    logger.debug(`Chat message:\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
 
     const matches = str.trim().toLowerCase().match(/!(\w+)\b/gm)
     if (matches == null || obsView.cameraTimeout(context.username)) return
@@ -274,21 +282,34 @@ class AdminStore {
         case '!camera':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
             sayForSubs()
-            return
+            break
           }
           obsView.processChat(str)
-          return
+          break
         case '!bell':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) return
-          logger.debug(`${context.username} is ringing the bell`)
+          logger.info(`${context.username} rang the bell`)
 
           // Automatically show the 'does' camera at the 'bell' shortcut if it's not already shown
           if (!obsView.inView('does')) obsView.processChat('2does')
-          if (cams.has('does')) cams.get('does').moveToShortcut('bell')
-          return
+          if (app.ptz.cams.has('does')) app.ptz.cams.get('does').moveToShortcut('bell')
+          break
 
+        case '!cams': {
+          const sources = obsView.getSources().map(s => app.ptz.names.includes(s) ? `${s} (ptz)` : s)
+          // Put PTZ cams first, then sort alphabetically
+          sources.sort((a, b) => {
+            if (a.includes('ptz') && !b.includes('ptz')) return -1
+            else if (!a.includes('ptz') && b.includes('ptz')) return 1
+            else if (a === b) return 0
+            else return a < b ? -1 : 1
+          })
+          if (sources.length > 0) chat.say(twitchChannel, `Available cams: ${sources.join(', ')}`)
+          else chat.say(twitchChannel, 'No cams currently available')
+          break
+        }
         // MOD COMMANDS
-        case '!log': {
+        case '!log':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             const words = str.trim()
               .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
@@ -302,8 +323,8 @@ class AdminStore {
               }
             })
           }
-          return
-        }
+          break
+
         case '!admin':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             const words = str.trim().toLowerCase()
@@ -331,7 +352,7 @@ class AdminStore {
               }
             })
           }
-          return
+          break
         case '!mute':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: true })
@@ -341,7 +362,7 @@ class AdminStore {
                 chat.say(twitchChannel, 'Unable to mute the stream!')
               })
           }
-          return
+          break
         case '!unmute':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: false })
@@ -351,14 +372,14 @@ class AdminStore {
                 chat.say(twitchChannel, 'Unable to unmute the stream!')
               })
           }
-          return
+          break
         case '!restartscript':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             triggerRestart(process.env.RESTART_FILE)
               .then(() => logger.info(`Triggered restart and wrote file '${process.env.RESTART_FILE}'`))
               .catch(e => logger.error(`Unable to write the restart file '${process.env.RESTART_FILE}': ${e}`))
           }
-          return
+          break
         case '!stop':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
@@ -368,7 +389,7 @@ class AdminStore {
                 chat.say(twitchChannel, 'Something went wrong... unable to stop the stream')
               })
           }
-          return
+          break
         case '!start':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StartStreaming')
@@ -378,7 +399,7 @@ class AdminStore {
                 chat.say(twitchChannel, 'Something went wrong... unable to start the stream')
               })
           }
-          return
+          break
         case '!restart':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
@@ -406,12 +427,12 @@ class AdminStore {
           break
         default: {
           const cam = match.replace(/^[!]+/, '')
-          if (cams.has(cam)) {
+          if (app.ptz.cams.has(cam)) {
             if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
               sayForSubs()
               return
             }
-            cams.get(cam).command(str)
+            app.ptz.cams.get(cam).command(str)
           }
         }
       }
