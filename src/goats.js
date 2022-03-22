@@ -81,6 +81,7 @@ class AdminStore {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
   async function shutdown () {
+    app.exited = true
     await Promise.all(app.shutdown.map(async f => {
       try { await f() } catch { logger.error('Error shutting something down!') }
     }))
@@ -97,6 +98,10 @@ class AdminStore {
   })
   process.on('SIGBREAK', () => {
     console.log('\nSIGBREAK received.')
+    shutdown()
+  })
+  process.on('SIGHUP', () => {
+    console.log('\nSIGHUP received.')
     shutdown()
   })
   process.on('beforeExit', (code) => {
@@ -171,7 +176,7 @@ class AdminStore {
   obs.on('ConnectionClosed', () => {
     logger.info('== OBS connection closed')
     // If the connection closes, retry after the timeout period
-    if (process.env.OBS_RETRY !== 'false') {
+    if (process.env.OBS_RETRY !== 'false' && !app.exited) {
       const delay = Math.round((process.env.OBS_RETRY_DELAY || 3000) * ((process.env.OBS_RETRY_DECAY || 1.2) ** app.obs.retries++))
       logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
@@ -264,7 +269,8 @@ class AdminStore {
     // Only process the command if the message starts with a '!'
     if (!str.trim().startsWith('!')) return
 
-    logger.debug(`\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    logger.info(`Message from ${context.username}: ${str}`)
+    logger.debug(`Chat message:\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
 
     const matches = str.trim().toLowerCase().match(/!(\w+)\b/gm)
     if (matches == null || obsView.cameraTimeout(context.username)) return
@@ -282,7 +288,7 @@ class AdminStore {
           break
         case '!bell':
           if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) return
-          logger.debug(`${context.username} is ringing the bell`)
+          logger.info(`${context.username} rang the bell`)
 
           // Automatically show the 'does' camera at the 'bell' shortcut if it's not already shown
           if (!obsView.inView('does')) obsView.processChat('2does')
