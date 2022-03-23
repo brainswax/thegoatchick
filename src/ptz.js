@@ -63,6 +63,8 @@ export default class PTZ {
     this.commands.set('info', (...args) => this.showShortcut(...args))
     this.commands.set('i', (...args) => this.showShortcut(...args))
     this.commands.set('shortcuts', (...args) => this.showShortcut(...args))
+    this.commands.set('position', (...args) => this.showPosition(...args))
+    this.commands.set('pos', (...args) => this.showPosition(...args))
   }
 
   /**
@@ -244,6 +246,15 @@ export default class PTZ {
     } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
   }
 
+  showPosition (shortcut) {
+    if (!shortcut || shortcut === '*') {
+      this.chat.say(this.channel, `pan: ${this.data.coords.pan}, tilt: ${this.data.coords.tilt}, zoom: ${this.data.coords.zoom}`)
+    } else if (this.data.shortcuts[shortcut]) {
+      this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
+      this.logger.info(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
+    } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
+  }
+
   /**
   Move directly to the named shortcut if it exists
   @param shortcut name of the shortcut
@@ -261,6 +272,12 @@ export default class PTZ {
     if (cmd.search(panRegex) >= 0 || cmd.search(tiltRegex) >= 0 || cmd.search(zoomRegex) >= 0) {
       this.logger.debug(`move camera '${this.name}': ${cmd}`)
       this.applyMove(cmd)
+    } else if (this.commands.has(cmd)) {
+      this.logger.debug(`command camera '${this.name}': ${cmd}`)
+      this.applyCommand(cmd)
+    } else if (this.data.shortcuts[cmd]) {
+      this.logger.debug(`shortcut camera '${this.name}': ${cmd}`)
+      this.data.coords = JSON.parse(JSON.stringify(this.data.shortcuts[cmd]))
     } else {
       this.logger.debug(`command camera '${this.name}': ${cmd}`)
       this.applyCommand(cmd)
