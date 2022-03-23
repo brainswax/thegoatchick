@@ -317,10 +317,14 @@ class AdminStore {
 
         // MOD COMMANDS
         case '!windows':
-          obsView.commandWindows(chat, process.env.TWITCH_CHANNEL, str)
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+            obsView.commandWindows(chat, process.env.TWITCH_CHANNEL, str)
+          }
           break
         case '!sync':
-          obsView.syncFromObs()
+          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+            obsView.syncFromObs()
+          }
           break
         case '!log':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
