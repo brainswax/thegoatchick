@@ -4,7 +4,7 @@ export default class OBSView {
   constructor (options) {
     this.obs = options.obs
     this.logger = options.logger || console
-    this.windowTypes = options.windowTypes || ['dshow_input']
+    this.windowTypes = options.windowTypes || ['dshow_input', 'ffmpeg_source']
 
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenes = {}
@@ -40,17 +40,24 @@ export default class OBSView {
       .catch(err => this.logger.warn(`storing the views: ${err}`))
   }
 
+  commandWindows (chat, channel, message) {
+    this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
+    this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowTypes), null, 2)}`)
+    this.logger.debug(`Windows: ${JSON.stringify(this.scenes[this.currentScene].windows, null, 2)}`)
+    chat.say(channel, `There are ${this.scenes[this.currentScene].windows.length} windows.`)
+  }
+
   /**
    * Gets an array of OBS sources by type
    * @param types the OBS source type
    * @returns array of source names
   */
-  getSources (types = this.windowTypes) {
+  getSources (types) {
     const sources = []
 
     if (this.currentScene && this.scenes[this.currentScene]) {
       Object.values(this.scenes[this.currentScene].sources).forEach(source => {
-        if (types.includes(source.type)) {
+        if (!types || types.includes(source.type)) {  // If types is null, assume any type
           sources.push(source.name.toLowerCase())
         }
       })
