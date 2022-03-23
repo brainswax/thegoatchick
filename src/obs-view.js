@@ -4,6 +4,7 @@ export default class OBSView {
   constructor (options) {
     this.obs = options.obs
     this.logger = options.logger || console
+    this.windowTypes = options.windowTypes || ['dshow_input']
 
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenes = {}
@@ -44,7 +45,7 @@ export default class OBSView {
    * @param types the OBS source type
    * @returns array of source names
   */
-  getSources (types = ['dshow_input', 'monitor_capture', 'window_capture']) {
+  getSources (types = this.windowTypes) {
     const sources = []
 
     if (this.currentScene && this.scenes[this.currentScene]) {
@@ -176,7 +177,7 @@ export default class OBSView {
                   this.scenes[scene.name].sources[source.name].source_cy = source.source_cy
                   this.scenes[scene.name].sources[source.name].type = source.type
 
-                  if (s.visible) {
+                  if (s.visible && this.windowTypes.includes(s.type)) { // Only visible media sources are treated as windows
                     this.scenes[scene.name].windows.push({
                       source: s.name,
                       position: s.position,
@@ -190,7 +191,20 @@ export default class OBSView {
 
             // Sort the windows based on their position on the screen to get cam0, cam1, etc.
             this.scenes[scene.name].windows.sort((a, b) => {
-              return a.position.x < b.position.x ? -1 : a.position.x > b.position.x ? 1 : a.position.y < b.position.y ? -1 : a.position.y > b.position.y ? 1 : 0
+              if (a.width * a.height > b.width * b.height) return -1 // Window 'a' is bigger
+              else if (a.width * a.height < b.width * b.height) return 1 // Window 'b' is bigger
+              else { // The windows are the same size, sort by distance from the origin
+                const adist = Math.sqrt(a.position.x ** 2 + a.position.y ** 2)
+                const bdist = Math.sqrt(b.position.x ** 2 + b.position.y ** 2)
+                if (adist < bdist) return -1 // Window 'a' is closer to the top left
+                else if (adist < bdist) return 1 // Window 'b' is closer to the top left
+                else if (a.position.x < b.position.x) return -1 // Window 'a' is closer to the left
+                else if (a.position.x > b.position.x) return 1 // Window 'b' is closer to the left
+                else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
+                else if (a.position.y > b.position.y) return 1 // Window 'a' is closer to the left
+              }
+
+              return 0 // The windows are the same size and position
             })
 
             this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source)

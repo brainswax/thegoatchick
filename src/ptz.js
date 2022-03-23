@@ -261,6 +261,12 @@ export default class PTZ {
     if (cmd.search(panRegex) >= 0 || cmd.search(tiltRegex) >= 0 || cmd.search(zoomRegex) >= 0) {
       this.logger.debug(`move camera '${this.name}': ${cmd}`)
       this.applyMove(cmd)
+    } else if (this.commands.has(cmd)) {
+      this.logger.debug(`command camera '${this.name}': ${cmd}`)
+      this.applyCommand(cmd)
+    } else if (this.data.shortcuts[cmd]) {
+      this.logger.debug(`shortcut camera '${this.name}': ${cmd}`)
+      this.data.coords = JSON.parse(JSON.stringify(this.data.shortcuts[cmd]))
     } else {
       this.logger.debug(`command camera '${this.name}': ${cmd}`)
       this.applyCommand(cmd)

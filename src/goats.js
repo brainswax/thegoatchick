@@ -9,8 +9,6 @@ import * as cenv from 'custom-env'
 import crypto from 'crypto'
 
 cenv.env(process.env.NODE_ENV)
-const twitchChannel = process.env.TWITCH_CHANNEL
-const prettySpace = '    ' // Used for formatting JSON in logs
 
 // Set default config file locations
 if (!process.env.PTZ_CONFIG || process.env.PTZ_CONFIG === '') { process.env.PTZ_CONFIG = '../conf/ptz.json' }
@@ -83,11 +81,13 @@ class AdminStore {
   // ///////////////////////////////////////////////////////////////////////////
   // Setup general application behavior and logging
   async function shutdown () {
-    app.exited = true
-    await Promise.all(app.shutdown.map(async f => {
-      try { await f() } catch { logger.error('Error shutting something down!') }
-    }))
-    setTimeout(() => process.exit(1), 0) // push it back on the event loop
+    if (!app.exited) { // only call this once
+      app.exited = true
+      await Promise.all(app.shutdown.map(async f => {
+        try { await f() } catch { logger.error('Error shutting something down!') }
+      }))
+      setTimeout(() => process.exit(1), 0) // push it back on the event loop
+    }
   }
 
   process.on('SIGTERM', () => {
@@ -106,19 +106,22 @@ class AdminStore {
     console.log('\nSIGHUP received.')
     shutdown()
   })
-  process.on('beforeExit', (code) => {
-    if (!app.exited) {
-      app.exited = true
-      logger.info(`== about to exit with code: ${code}`)
-    }
-  })
   process.on('uncaughtException', (err, origin) => {
     logger.error(`${origin}: ${err}`)
   })
   process.on('unhandledRejection', (reason, promise) => {
-    logger.warn(`Venice broke her promise to Jerry...\nPromise: ${promise.constructor.valueOf()}\nReason: ${JSON.stringify(reason, null, prettySpace)}`)
+    logger.warn(`Venice broke her promise to Jerry...\nPromise: ${promise.constructor.valueOf()}\nReason: ${JSON.stringify(reason, null, 2)}`)
   })
   process.on('exit', (code) => { logger.log(`== exiting with code: ${code}`) })
+
+  import(process.env.APP_CONFIG)
+    .then(config => {
+      if (config && config.default && config.default.admins) {
+        logger.debug(`Loaded app config: ${JSON.stringify(config, null, 2)}`)
+        app.config = config.default
+      }
+    })
+    .catch(e => logger.warn(`Unable to load config ${process.env.APP_CONFIG}: ${e}`))
 
   // Grab the version and log it
   import('../package.json')
@@ -135,18 +138,11 @@ class AdminStore {
     db.close()
   })
   const adminStore = new AdminStore({ logger: logger, db: db })
-  const admins = await adminStore.admins
+  const admins = await adminStore.admins // load from store first
 
-  if (admins.size === 0) {
-    import(process.env.APP_CONFIG)
-      .then(config => {
-        logger.debug(`Loading admins: ${JSON.stringify(config)}`)
-        if (config && config.default && config.default.admins) {
-          config.default.admins.forEach(admin => admins.add(admin))
-          adminStore.admins = admins
-        }
-      })
-      .catch(e => logger.warn(`Unable to load admins from ${process.env.APP_CONFIG}: ${e}`))
+  if (admins.size === 0) { // if nothing in the store, load from the app config
+    app.config.admins.forEach(admin => admins.add(admin))
+    adminStore.admins = admins // persist any admins from the config
   }
 
   // ///////////////////////////////////////////////////////////////////////////
@@ -156,9 +152,11 @@ class AdminStore {
     logger.info('== Shutting down OBS...')
     obs.disconnect()
   })
+  const types = app.config && app.config.windows && app.config.windows.sourceTypes ? app.config.windows.sourceTypes : ['dshow_input']
   const obsView = new OBSView({
     obs: obs,
     db: db,
+    windowTypes: types,
     logger: logger
   })
 
@@ -211,7 +209,7 @@ class AdminStore {
     },
     connection: { reconnect: process.env.TWITCH_RECONNECT !== 'false' },
     maxReconnectAttempts: process.env.TWITCH_RECONNECT_TRIES,
-    channels: [twitchChannel]
+    channels: [process.env.TWITCH_CHANNEL]
   })
   app.shutdown.push(async () => {
     logger.info('== Shutting down twitch...')
@@ -226,18 +224,18 @@ class AdminStore {
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
-  await getPTZCams(app.ptz.cams, app.ptz.names, chat, twitchChannel, process.env.PTZ_CONFIG, { logger: logger, db: db })
+  await getPTZCams(app.ptz.cams, app.ptz.names, chat, process.env.TWITCH_CHANNEL, process.env.PTZ_CONFIG, { logger: logger, db: db })
     .then(() => logger.info('== loaded cameras'))
     .catch(err => logger.error(`== error loading cameras: ${err}`))
 
   // Connect to Twitch
-  logger.info(`== connecting to twitch: ${process.env.TWITCH_USER}@${twitchChannel}`)
+  logger.info(`== connecting to twitch: ${process.env.TWITCH_USER}@${process.env.TWITCH_CHANNEL}`)
   chat.connect()
-    .then(() => logger.info(`== connected to twitch channel: ${process.env.TWITCH_USER}@${twitchChannel}`))
-    .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, prettySpace)}`))
+    .then(() => logger.info(`== connected to twitch channel: ${process.env.TWITCH_USER}@${process.env.TWITCH_CHANNEL}`))
+    .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, 2)}`))
 
   function onCheerHandler (target, context, msg) {
-    logger.info(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, prettySpace)}`)
+    logger.info(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, 2)}`)
 
     // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
     if (!obsView.inView('treat')) obsView.processChat('1treat')
@@ -264,15 +262,15 @@ class AdminStore {
   }
 
   function sayForSubs () {
-    chat.say(twitchChannel, 'This command is reserved for Subscribers')
+    chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for Subscribers')
   }
 
   function chatBot (str, context) {
     // Only process the command if the message starts with a '!'
     if (!str.trim().startsWith('!')) return
 
-    logger.info(`Message from ${context.username}: ${str}`)
-    logger.debug(`Chat message:\nmessage: ${str}\nuser: ${JSON.stringify(context, null, prettySpace)}`)
+    logger.info(`Command from ${context.username}: ${str}`)
+    logger.debug(`Chat message:\nmessage: ${str}\nuser: ${JSON.stringify(context, null, 2)}`)
 
     const matches = str.trim().toLowerCase().match(/!(\w+)\b/gm)
     if (matches == null || obsView.cameraTimeout(context.username)) return
@@ -306,8 +304,8 @@ class AdminStore {
             else if (a === b) return 0
             else return a < b ? -1 : 1
           })
-          if (sources.length > 0) chat.say(twitchChannel, `Available cams: ${sources.join(', ')}`)
-          else chat.say(twitchChannel, 'No cams currently available')
+          if (sources.length > 0) chat.say(process.env.TWITCH_CHANNEL, `Available cams: ${sources.join(', ')}`)
+          else chat.say(process.env.TWITCH_CHANNEL, 'No cams currently available')
           break
         }
         // MOD COMMANDS
@@ -358,20 +356,20 @@ class AdminStore {
         case '!mute':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: true })
-              .then(() => chat.say(twitchChannel, 'Stream muted'))
+              .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream muted'))
               .catch(e => {
-                logger.error(`Unable to mute: ${JSON.stringify(e, null, prettySpace)}`)
-                chat.say(twitchChannel, 'Unable to mute the stream!')
+                logger.error(`Unable to mute: ${JSON.stringify(e, null, 2)}`)
+                chat.say(process.env.TWITCH_CHANNEL, 'Unable to mute the stream!')
               })
           }
           break
         case '!unmute':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('SetMute', { source: 'Audio', mute: false })
-              .then(() => chat.say(twitchChannel, 'Stream unmuted'))
+              .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream unmuted'))
               .catch(e => {
-                logger.error(`Unable to unmute: ${JSON.stringify(e, null, prettySpace)}`)
-                chat.say(twitchChannel, 'Unable to unmute the stream!')
+                logger.error(`Unable to unmute: ${JSON.stringify(e, null, 2)}`)
+                chat.say(process.env.TWITCH_CHANNEL, 'Unable to unmute the stream!')
               })
           }
           break
@@ -385,20 +383,20 @@ class AdminStore {
         case '!stop':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
-              .then(() => chat.say(twitchChannel, 'Stream stopped'))
+              .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped'))
               .catch(e => {
-                logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, prettySpace)}`)
-                chat.say(twitchChannel, 'Something went wrong... unable to stop the stream')
+                logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, 2)}`)
+                chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... unable to stop the stream')
               })
           }
           break
         case '!start':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StartStreaming')
-              .then(() => chat.say(twitchChannel, 'Stream started'))
+              .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream started'))
               .catch(e => {
-                logger.error(`Unable to start OBS: ${JSON.stringify(e, null, prettySpace)}`)
-                chat.say(twitchChannel, 'Something went wrong... unable to start the stream')
+                logger.error(`Unable to start OBS: ${JSON.stringify(e, null, 2)}`)
+                chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... unable to start the stream')
               })
           }
           break
@@ -406,24 +404,24 @@ class AdminStore {
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             obs.send('StopStreaming')
               .then(() => {
-                chat.say(twitchChannel, 'Stream stopped. Starting in...')
-                setTimeout(function () { chat.say(twitchChannel, ':Z Five') }, 5000)
-                setTimeout(function () { chat.say(twitchChannel, ':\\ Four') }, 6000)
-                setTimeout(function () { chat.say(twitchChannel, ';p Three') }, 7000)
-                setTimeout(function () { chat.say(twitchChannel, ':) Two') }, 8000)
-                setTimeout(function () { chat.say(twitchChannel, ':D One') }, 9000)
+                chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped. Starting in...')
+                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':Z Five') }, 5000)
+                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':\\ Four') }, 6000)
+                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ';p Three') }, 7000)
+                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':) Two') }, 8000)
+                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':D One') }, 9000)
                 setTimeout(function () {
                   obs.send('StartStreaming')
-                    .then(() => chat.say(twitchChannel, 'Stream restarted'))
+                    .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream restarted'))
                     .catch(e => {
-                      logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, prettySpace)}`)
-                      chat.say(twitchChannel, 'Something went wrong... unable to restart the stream')
+                      logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, 2)}`)
+                      chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... unable to restart the stream')
                     })
                 }, 10000)
               })
               .catch(e => {
-                logger.error(`Unable to stop OBS for a restart: ${JSON.stringify(e, null, prettySpace)}`)
-                chat.say(twitchChannel, 'Something went wrong... the stream won\'t stop.')
+                logger.error(`Unable to stop OBS for a restart: ${JSON.stringify(e, null, 2)}`)
+                chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... the stream won\'t stop.')
               })
           }
           break
