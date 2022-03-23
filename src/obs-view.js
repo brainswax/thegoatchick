@@ -41,7 +41,10 @@ export default class OBSView {
   }
 
   commandWindows (chat, channel, message) {
-    chat.say(channel, `There are ${this.getSources(this.windowTypes).length} windows.`)
+    this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
+    this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowTypes), null, 2)}`)
+    this.logger.debug(`Windows: ${JSON.stringify(this.scenes[this.currentScene].windows, null, 2)}`)
+    chat.say(channel, `There are ${this.scenes[this.currentScene].windows.length} windows.`)
   }
 
   /**
@@ -52,7 +55,6 @@ export default class OBSView {
   getSources (types) {
     const sources = []
 
-    this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     if (this.currentScene && this.scenes[this.currentScene]) {
       Object.values(this.scenes[this.currentScene].sources).forEach(source => {
         if (!types || types.includes(source.type)) {  // If types is null, assume any type
