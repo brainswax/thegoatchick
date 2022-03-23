@@ -63,6 +63,8 @@ export default class PTZ {
     this.commands.set('info', (...args) => this.showShortcut(...args))
     this.commands.set('i', (...args) => this.showShortcut(...args))
     this.commands.set('shortcuts', (...args) => this.showShortcut(...args))
+    this.commands.set('position', (...args) => this.showPosition(...args))
+    this.commands.set('pos', (...args) => this.showPosition(...args))
   }
 
   /**
@@ -238,6 +240,15 @@ export default class PTZ {
       const snames = Object.keys(this.data.shortcuts)
       if (snames.length === 0) this.chat.say(this.channel, `There are no shortcuts for ${this.name}`)
       else this.chat.say(this.channel, `${this.name} shortcuts: ${snames.join(', ')}`)
+    } else if (this.data.shortcuts[shortcut]) {
+      this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
+      this.logger.info(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
+    } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
+  }
+
+  showPosition (shortcut) {
+    if (!shortcut || shortcut === '*') {
+      this.chat.say(this.channel, `pan: ${this.data.coords.pan}, tilt: ${this.data.coords.tilt}, zoom: ${this.data.coords.zoom}`)
     } else if (this.data.shortcuts[shortcut]) {
       this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
       this.logger.info(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
