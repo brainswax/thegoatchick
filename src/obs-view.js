@@ -52,6 +52,7 @@ export default class OBSView {
   getSources (types) {
     const sources = []
 
+    this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     if (this.currentScene && this.scenes[this.currentScene]) {
       Object.values(this.scenes[this.currentScene].sources).forEach(source => {
         if (!types || types.includes(source.type)) {  // If types is null, assume any type
