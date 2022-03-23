@@ -4,7 +4,7 @@ export default class OBSView {
   constructor (options) {
     this.obs = options.obs
     this.logger = options.logger || console
-    this.windowTypes = options.windowTypes || ['dshow_input']
+    this.windowTypes = options.windowTypes || ['dshow_input', 'ffmpeg_source']
 
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenes = {}

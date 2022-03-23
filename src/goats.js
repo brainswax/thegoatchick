@@ -120,7 +120,7 @@ class AdminStore {
         logger.debug(`Loaded app config: ${JSON.stringify(config, null, 2)}`)
         app.config = config.default
         if (!app.config.windows) app.config.windows = {}
-        if (!app.config.windows.sourceTypes) app.config.windows.sourceTypes = ['dshow_input']
+        if (!app.config.windows.sourceTypes) app.config.windows.sourceTypes = ['dshow_input', 'ffmpeg_source']
       }
     })
     .catch(e => logger.warn(`Unable to load config ${process.env.APP_CONFIG}: ${e}`))
