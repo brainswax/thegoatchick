@@ -114,17 +114,19 @@ class AdminStore {
   })
   process.on('exit', (code) => { logger.log(`== exiting with code: ${code}`) })
 
-  import(process.env.APP_CONFIG)
+  await import(process.env.APP_CONFIG)
     .then(config => {
-      if (config && config.default && config.default.admins) {
+      if (config && config.default) {
         logger.debug(`Loaded app config: ${JSON.stringify(config, null, 2)}`)
         app.config = config.default
+        if (!app.config.windows) app.config.windows = {}
+        if (!app.config.windows.sourceTypes) app.config.windows.sourceTypes = ['dshow_input']
       }
     })
     .catch(e => logger.warn(`Unable to load config ${process.env.APP_CONFIG}: ${e}`))
 
   // Grab the version and log it
-  import('../package.json')
+  await import('../package.json')
     .then(pkg => { logger.log(`== starting ${pkg.default.name}@${pkg.default.version}`) })
     .catch(e => { logger.error(`Unable to open package information: ${e}`) })
 
@@ -152,11 +154,10 @@ class AdminStore {
     logger.info('== Shutting down OBS...')
     obs.disconnect()
   })
-  const types = app.config && app.config.windows && app.config.windows.sourceTypes ? app.config.windows.sourceTypes : ['dshow_input']
   const obsView = new OBSView({
     obs: obs,
     db: db,
-    windowTypes: types,
+    windowTypes: app.config.windows.sourceTypes,
     logger: logger
   })
 
@@ -277,6 +278,25 @@ class AdminStore {
 
     matches.forEach(match => {
       switch (match) {
+        // ANYONE COMMANDS
+        case '!cams': {
+          const sources = obsView.getSources(app.windows.sourceTypes).map(s => app.ptz.names.includes(s) ? `${s} (ptz)` : s)
+          // Put PTZ cams first, then sort alphabetically
+          sources.sort((a, b) => {
+            if (a.includes('ptz') && !b.includes('ptz')) return -1
+            else if (!a.includes('ptz') && b.includes('ptz')) return 1
+            else if (a === b) return 0
+            else return a < b ? -1 : 1
+          })
+          if (sources.length > 0) chat.say(process.env.TWITCH_CHANNEL, `Available cams: ${sources.join(', ')}`)
+          else chat.say(process.env.TWITCH_CHANNEL, 'No cams currently available')
+          break
+        }
+        case '!ptz':
+          if (app.ptz.names.length > 0) chat.say(process.env.TWITCH_CHANNEL, `PTZ cams: ${app.ptz.names.join(', ')}`)
+          else chat.say(process.env.TWITCH_CHANNEL, 'No PTZ cams configured')
+          break
+
         // SUBSCRIBER COMMANDS
         case '!cam':
         case '!camera':
@@ -295,20 +315,13 @@ class AdminStore {
           if (app.ptz.cams.has('does')) app.ptz.cams.get('does').moveToShortcut('bell')
           break
 
-        case '!cams': {
-          const sources = obsView.getSources().map(s => app.ptz.names.includes(s) ? `${s} (ptz)` : s)
-          // Put PTZ cams first, then sort alphabetically
-          sources.sort((a, b) => {
-            if (a.includes('ptz') && !b.includes('ptz')) return -1
-            else if (!a.includes('ptz') && b.includes('ptz')) return 1
-            else if (a === b) return 0
-            else return a < b ? -1 : 1
-          })
-          if (sources.length > 0) chat.say(process.env.TWITCH_CHANNEL, `Available cams: ${sources.join(', ')}`)
-          else chat.say(process.env.TWITCH_CHANNEL, 'No cams currently available')
-          break
-        }
         // MOD COMMANDS
+        case '!windows':
+          obsView.commandWindows(chat, process.env.TWITCH_CHANNEL, str)
+          break
+        case '!sync':
+          obsView.syncFromObs()
+          break
         case '!log':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             const words = str.trim()
@@ -324,7 +337,6 @@ class AdminStore {
             })
           }
           break
-
         case '!admin':
           if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
             const words = str.trim().toLowerCase()

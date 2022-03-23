@@ -40,17 +40,21 @@ export default class OBSView {
       .catch(err => this.logger.warn(`storing the views: ${err}`))
   }
 
+  commandWindows (chat, channel, message) {
+    chat.say(channel, `There are ${this.getSources(this.windowTypes).length} windows.`)
+  }
+
   /**
    * Gets an array of OBS sources by type
    * @param types the OBS source type
    * @returns array of source names
   */
-  getSources (types = this.windowTypes) {
+  getSources (types) {
     const sources = []
 
     if (this.currentScene && this.scenes[this.currentScene]) {
       Object.values(this.scenes[this.currentScene].sources).forEach(source => {
-        if (types.includes(source.type)) {
+        if (!types || types.includes(source.type)) {  // If types is null, assume any type
           sources.push(source.name.toLowerCase())
         }
       })
