@@ -277,6 +277,10 @@ class AdminStore {
     chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for Subscribers')
   }
 
+  function sayForMods () {
+    chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for mods')
+  }
+
   function chatBot (str, context) {
     // Only process the command if the message starts with a '!'
     if (!str.trim().startsWith('!')) return
@@ -467,7 +471,10 @@ class AdminStore {
               obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
             }
             if (match.startsWith('!cam') && match.length > '!cam'.length) {
-              app.windowHandler.handleWindow(match, str)
+              if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+                app.windowHandler.handleWindow(match, str)
+              }
+              else sayForMods()
             }
           }
         }
