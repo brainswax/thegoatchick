@@ -8,6 +8,9 @@ export default class OBSView {
 
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenes = {}
+
+    this.commands = new Map()
+    this.commands.set('source', (...args) => this.showInfo(...args))
   }
 
   /**
@@ -40,6 +43,39 @@ export default class OBSView {
       .catch(err => this.logger.warn(`storing the views: ${err}`))
   }
 
+  command (chat, channel, alias, txt) {
+    const words = txt.trim().toLowerCase()
+      .replace(/[a-z]+[\s]+[\d]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
+      .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
+      .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
+      .split(/[\s]+/) // split on whitespace
+
+    words.forEach(cmd => {
+      this.apply(chat, channel, alias, cmd)
+    })
+  }
+
+  apply (chat, channel, alias, cmd) {
+    if (this.commands.has(cmd)) {
+      this.commands.get(cmd)(chat, channel, alias)
+    }
+    else {
+      const [command, value] = cmd.split(/[:]+/)
+      if (this.commands.has(command)) this.commands.get(command)(chat, channel, alias, value)
+    }
+  }
+
+  showInfo (chat, channel, alias, value) {
+    const source = this.getSourceByAlias(alias)
+    if (source) {
+      chat.say(channel, `source w:${source.sourceWidth}, h:${source.sourceHeight}`)
+    }
+    else {
+      this.logger.info(`No source info for '${alias}'`)
+    }
+  }
+
   commandWindows (chat, channel, message) {
     this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowTypes), null, 2)}`)
@@ -64,6 +100,29 @@ export default class OBSView {
     }
 
     return sources
+  }
+
+  /**
+   * Get the source object by alias name
+   * @param {string} source an alias for the source
+   * @param {string} scene the name of the scene
+   * @returns the source objevt returned from OBS
+   */
+  getSourceByAlias (source, scene = this.currentScene) {
+    if (this.scenes[scene]) {
+      let sourceName = this.scenes[scene].aliases[source]
+      if (sourceName) {
+        return this.scenes[scene].sources[sourceName]
+      }
+    }
+  }
+
+  getAliases (scene = this.currentScene) {
+    return this.scenes[scene].aliases
+  }
+
+  getWindows(scene = this.currentScene) {
+    return this.scenes[scene].windows
   }
 
   /**

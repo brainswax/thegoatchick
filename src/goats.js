@@ -7,6 +7,7 @@ import { Stojo } from '@codegrill/stojo'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 import crypto from 'crypto'
+import WindowHandler from './windowHandler.mjs'
 
 cenv.env(process.env.NODE_ENV)
 
@@ -262,6 +263,16 @@ class AdminStore {
     logger.info(`== disconnected from twitch: ${reason || 'unknown reason'}`)
   }
 
+  // This will process !camN commands to view and manage windows for cams/views
+  app.windowHandler = new WindowHandler({
+    logger: logger,
+    twitch: {
+      chat: chat,
+      channel: process.env.TWITCH_CHANNEL
+    },
+    obsView: obsView
+  })
+
   function sayForSubs () {
     chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for Subscribers')
   }
@@ -443,12 +454,21 @@ class AdminStore {
           break
         default: {
           const cam = match.replace(/^[!]+/, '')
-          if (app.ptz.cams.has(cam)) {
+          if (app.ptz.cams.has(cam) || cam in obsView.getAliases() || match.startsWith('!cam')) {
             if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
               sayForSubs()
               return
             }
-            app.ptz.cams.get(cam).command(str)
+
+            if (app.ptz.cams.has(cam)) {
+                app.ptz.cams.get(cam).command(str)
+            }
+            if (cam in obsView.getAliases()) {
+              obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
+            }
+            if (match.startsWith('!cam') && match.length > '!cam'.length) {
+              app.windowHandler.handleWindow(match, str)
+            }
           }
         }
       }
