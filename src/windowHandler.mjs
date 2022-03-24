@@ -4,6 +4,8 @@ export default class WindowHandler {
     this.twitch = options.twitch
     this.obsView = options.obsView
 
+    this.changed = false
+
     this.commands = new Map()
     this.commands.set('info', (...args) => this.showInfo(...args))
     this.commands.set('i', (...args) => this.showInfo(...args))
@@ -29,24 +31,63 @@ export default class WindowHandler {
   apply (name, cmd) {
     if (this.commands.has(cmd)) {
       this.commands.get(cmd)(name)
-    }
-    else {
+    } else {
       const [command, value] = cmd.split(/[:]+/)
-      if (this.commands.has(command)) this.commands.get(command)(chat, channel, name, value)
+      if (this.commands.has(command)) this.commands.get(command)(name, value)
     }
   }
 
   handleWindow (cmd, str) {
-    let split = cmd.split(/\D+/) // Grab the index on the end of the command
+    const split = cmd.split(/\D+/) // Grab the index on the end of the command
     if (split.length > 1) {
-      this.command(split[1], str)
+      this.command(parseInt(split[1]), str)
+    }
+
+    if (this.changed) {
+      this.changed = false
+      this.obsView.updateOBS()
     }
   }
 
   showInfo (index, value = '*') {
-    let windows = this.obsView.getWindows()
-    if (windows.length > index) {
-      this.twitch.chat.say(this.twitch.channel, `x:${windows[index].position.x}, y:${windows[index].position.y}, w:${windows[index].width}, h:${windows[index].height}`)
+    if (this.obsView.getWindows().length > index) {
+      this.twitch.chat.say(this.twitch.channel, `x:${this.obsView.getWindowX(index)}, y:${this.obsView.getWindowY(index)}, w:${this.obsView.getWindowWidth(index)}, h:${this.obsView.getWindowHeight(index)}`)
+    }
+  }
+
+  setXCoord (index, value) {
+    if (!value) return
+    const current = this.obsView.getWindowX(index)
+    if (value !== current) {
+      this.changed = true
+      this.obsView.setWindowY(index, value)
+    }
+  }
+
+  setYCoord (index, value) {
+    if (!value) return
+    const current = this.obsView.getWindowY(index)
+    if (value !== current) {
+      this.changed = true
+      this.obsView.setWindowY(index, parseInt(value))
+    }
+  }
+
+  setWidth (index, value) {
+    if (!value) return
+    const current = this.obsView.getWindowWidth(index)
+    if (value !== current) {
+      this.changed = true
+      this.obsView.setWindowWidth(index, parseInt(value))
+    }
+  }
+
+  setHeight (index, value) {
+    if (!value) return
+    const current = this.obsView.getWindowHeight(index)
+    if (value !== current) {
+      this.changed = true
+      this.obsView.setWindowHeight(index, value)
     }
   }
 }

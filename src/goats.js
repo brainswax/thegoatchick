@@ -465,7 +465,7 @@ class AdminStore {
             }
 
             if (app.ptz.cams.has(cam)) {
-                app.ptz.cams.get(cam).command(str)
+              app.ptz.cams.get(cam).command(str)
             }
             if (cam in obsView.getAliases()) {
               obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
@@ -473,8 +473,7 @@ class AdminStore {
             if (match.startsWith('!cam') && match.length > '!cam'.length) {
               if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
                 app.windowHandler.handleWindow(match, str)
-              }
-              else sayForMods()
+              } else sayForMods()
             }
           }
         }
