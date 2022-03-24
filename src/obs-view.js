@@ -8,6 +8,10 @@ export default class OBSView {
 
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenes = {}
+    this.currentScene = ''
+
+    this.commands = new Map()
+    this.commands.set('source', (...args) => this.showInfo(...args))
   }
 
   /**
@@ -40,6 +44,37 @@ export default class OBSView {
       .catch(err => this.logger.warn(`storing the views: ${err}`))
   }
 
+  command (chat, channel, alias, txt) {
+    const words = txt.trim().toLowerCase()
+      .replace(/[a-z]+[\s]+[\d]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
+      .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
+      .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
+      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
+      .split(/[\s]+/) // split on whitespace
+
+    words.forEach(cmd => {
+      this.apply(chat, channel, alias, cmd)
+    })
+  }
+
+  apply (chat, channel, alias, cmd) {
+    if (this.commands.has(cmd)) {
+      this.commands.get(cmd)(chat, channel, alias)
+    } else {
+      const [command, value] = cmd.split(/[:]+/)
+      if (this.commands.has(command)) this.commands.get(command)(chat, channel, alias, value)
+    }
+  }
+
+  showInfo (chat, channel, alias, value) {
+    const source = this.getSourceByAlias(alias)
+    if (source) {
+      chat.say(channel, `source w:${source.sourceWidth}, h:${source.sourceHeight}`)
+    } else {
+      this.logger.info(`No source info for '${alias}'`)
+    }
+  }
+
   commandWindows (chat, channel, message) {
     this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowTypes), null, 2)}`)
@@ -64,6 +99,29 @@ export default class OBSView {
     }
 
     return sources
+  }
+
+  /**
+   * Get the source object by alias name
+   * @param {string} source an alias for the source
+   * @param {string} scene the name of the scene
+   * @returns the source objevt returned from OBS
+   */
+  getSourceByAlias (source, scene = this.currentScene) {
+    if (this.scenes[scene]) {
+      const sourceName = this.scenes[scene].aliases[source]
+      if (sourceName) {
+        return this.scenes[scene].sources[sourceName]
+      }
+    }
+  }
+
+  getAliases (scene = this.currentScene) {
+    return this.scenes[scene].aliases
+  }
+
+  getWindows (scene = this.currentScene) {
+    return this.scenes[scene].windows
   }
 
   /**
@@ -148,6 +206,62 @@ export default class OBSView {
     }
   }
 
+  getWindowX (index, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].position.x
+  }
+
+  setWindowX (index, value, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) {
+      const old = this.scenes[scene].windows[index].position.x
+      if (value !== old) {
+        this.scenes[scene].changedWindows.add(index)
+        this.scenes[scene].windows[index].position.x = value
+      }
+    }
+  }
+
+  getWindowY (index, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].position.y
+  }
+
+  setWindowY (index, value, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) {
+      const old = this.scenes[scene].windows[index].position.y
+      if (value !== old) {
+        this.scenes[scene].changedWindows.add(index)
+        this.scenes[scene].windows[index].position.y = value
+      }
+    }
+  }
+
+  getWindowWidth (index, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].width
+  }
+
+  setWindowWidth (index, value, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) {
+      const old = this.scenes[scene].windows[index].width
+      if (value !== old) {
+        this.scenes[scene].changedWindows.add(index)
+        this.scenes[scene].windows[index].width = value
+      }
+    }
+  }
+
+  getWindowHeight (index, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].height
+  }
+
+  setWindowHeight (index, value, scene = this.currentScene) {
+    if (this.scenes[scene].windows.length > index) {
+      const old = this.scenes[scene].windows[index].height
+      if (value !== old) {
+        this.scenes[scene].changedWindows.add(index)
+        this.scenes[scene].windows[index].height = value
+      }
+    }
+  }
+
   /**
    * Given an obs connection, grab all the scenes and resources to construct the cams and windows
    */
@@ -168,6 +282,7 @@ export default class OBSView {
             aliases: {},
             windows: [],
             changed: new Set(),
+            changedWindows: new Set(),
             cams: []
           }
 
@@ -253,37 +368,41 @@ export default class OBSView {
   /**
   Update OBS with only the cameras that have changed
   */
-  updateOBS () {
-    if (this.currentScene) {
-      const windows = this.updateWindows(this.currentScene)
+  updateOBS (scene = this.currentScene) {
+    if (scene) {
+      const windows = this.updateWindows(scene)
 
-      if (this.scenes[this.currentScene].changed.length === 0) {
-        this.logger.debug('no OBS views were changed')
+      if (this.scenes[scene].changed.length === 0) {
+        this.logger.debug('no cams were changed')
       } else {
-        this.logger.info(`changed windows: ${JSON.stringify(Array.from(this.scenes[this.currentScene].changed))}`)
+        this.logger.info(`changed windows: ${JSON.stringify(Array.from(this.scenes[scene].changed))}`)
         this.logger.debug(`updated windows: ${JSON.stringify(windows, null, '  ')}`)
       }
 
-      windows.forEach(window => {
-        if (this.scenes[this.currentScene].changed.has(window.item)) {
-          this.obs.send('SetSceneItemProperties', window)
-            .then(() => this.scenes[this.currentScene].changed.delete(window.item))
-            .catch(err => { this.logger.warn(`Unable to set OBS properties '${window.item}' for scene '${this.currentScene}': ${JSON.stringify(err)}`) })
-        }
-      })
+      {
+        let i = 0
+        windows.forEach(window => {
+          if (this.scenes[scene].changed.has(window.item) || this.scenes[scene].changedWindows.has(i++)) {
+            this.obs.send('SetSceneItemProperties', window)
+              .then(() => this.scenes[scene].changed.delete(window.item))
+              .catch(err => { this.logger.warn(`Unable to set OBS properties '${window.item}' for scene '${scene}': ${JSON.stringify(err)}`) })
+            this.scenes[scene].changedWindows.delete(i - 1)
+          }
+        })
+      }
 
       // Anything left needs to be hidden
-      this.scenes[this.currentScene].changed.forEach(cam => {
-        if (!this.scenes[this.currentScene].cams.includes(cam)) {
+      this.scenes[scene].changed.forEach(cam => {
+        if (!this.scenes[scene].cams.includes(cam)) {
           const view = { source: cam, render: false }
-          view['scene-name'] = this.currentScene
+          view['scene-name'] = scene
           this.obs.send('SetSceneItemRender', view)
-            .then(() => this.scenes[this.currentScene].changed.delete(cam))
-            .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${this.currentScene}': ${err.error}`) })
+            .then(() => this.scenes[scene].changed.delete(cam))
+            .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${scene}': ${err.error}`) })
         }
       })
 
-      if (this.scenes[this.currentScene].changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again later
+      if (this.scenes[scene].changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again later
         setTimeout(() => this.updateOBS(), parseInt(process.env.OBS_RETRY_DELAY) || 5000)
       }
 
