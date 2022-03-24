@@ -280,7 +280,7 @@ class AdminStore {
       switch (match) {
         // ANYONE COMMANDS
         case '!cams': {
-          const sources = obsView.getSources(app.windows.sourceTypes).map(s => app.ptz.names.includes(s) ? `${s} (ptz)` : s)
+          const sources = obsView.getSources(app.config.windows.sourceTypes).map(s => app.ptz.names.includes(s) ? `${s} (ptz)` : s)
           // Put PTZ cams first, then sort alphabetically
           sources.sort((a, b) => {
             if (a.includes('ptz') && !b.includes('ptz')) return -1
