@@ -289,7 +289,7 @@ export default class OBSView {
           if (scene.name === this.currentScene) { // TODO: grab all the scenes
             await Promise.all(scene.sources.map(async source => {
               // Automatically add an alias
-              this.scenes[scene.name].aliases[source.name.toLowerCase().replace(' ', '-')] = source.name
+              this.scenes[scene.name].aliases[source.name.toLowerCase().replace(/\W+/, '-')] = source.name
 
               // Request properties for each source
               await this.obs.send('GetSceneItemProperties', { scene: scene.name, item: source.name })
