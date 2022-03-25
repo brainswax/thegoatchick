@@ -329,7 +329,8 @@ export default class OBSView {
               return 0 // The windows are the same size and position
             })
 
-            this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source)
+            this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source) // Get the names from the sorted list
+            this.scenes[scene.name].windows.forEach(w => delete w.source)
             this.updateWindows(scene.name)
           }
         }))
