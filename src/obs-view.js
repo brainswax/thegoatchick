@@ -289,7 +289,7 @@ export default class OBSView {
           if (scene.name === this.currentScene) { // TODO: grab all the scenes
             await Promise.all(scene.sources.map(async source => {
               // Automatically add an alias
-              this.scenes[scene.name].aliases[source.name.toLowerCase().replace(' ', '-')] = source.name
+              this.scenes[scene.name].aliases[source.name.toLowerCase().replace(/\W+/, '-')] = source.name
 
               // Request properties for each source
               await this.obs.send('GetSceneItemProperties', { scene: scene.name, item: source.name })
@@ -329,7 +329,8 @@ export default class OBSView {
               return 0 // The windows are the same size and position
             })
 
-            this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source)
+            this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source) // Get the names from the sorted list
+            this.scenes[scene.name].windows.forEach(w => delete w.source)
             this.updateWindows(scene.name)
           }
         }))

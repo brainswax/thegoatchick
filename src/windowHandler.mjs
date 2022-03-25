@@ -51,7 +51,7 @@ export default class WindowHandler {
 
   showInfo (index, value = '*') {
     if (this.obsView.getWindows().length > index) {
-      this.twitch.chat.say(this.twitch.channel, `x:${this.obsView.getWindowX(index)}, y:${this.obsView.getWindowY(index)}, w:${this.obsView.getWindowWidth(index)}, h:${this.obsView.getWindowHeight(index)}`)
+      this.twitch.chat.say(this.twitch.channel, `cam${index} x:${this.obsView.getWindowX(index)} y:${this.obsView.getWindowY(index)} w:${this.obsView.getWindowWidth(index)} h:${this.obsView.getWindowHeight(index)}`)
     }
   }
 
@@ -60,7 +60,7 @@ export default class WindowHandler {
     const current = this.obsView.getWindowX(index)
     if (value !== current) {
       this.changed = true
-      this.obsView.setWindowY(index, value)
+      this.obsView.setWindowX(index, parseInt(value))
     }
   }
 
@@ -87,7 +87,7 @@ export default class WindowHandler {
     const current = this.obsView.getWindowHeight(index)
     if (value !== current) {
       this.changed = true
-      this.obsView.setWindowHeight(index, value)
+      this.obsView.setWindowHeight(index, parseInt(value))
     }
   }
 }
