@@ -295,6 +295,16 @@ export default class OBSView {
     }
   }
 
+  deleteScene (sceneName) {
+    if (sceneName in this.scenes) delete this.scenes[sceneName]
+    for (const [k, v] of this.sceneAliases.entries()) {
+      if (sceneName == v) {
+        this.sceneAliases.delete(k)
+      }
+    }
+    this.logger.info(`Deleted scene '${sceneName}'`)
+  }
+
   // Handlers for OBS events //////////////////////////////////////////////////
   sceneItemVisibilityChanged (data) {
     this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
@@ -315,10 +325,22 @@ export default class OBSView {
     }
   }
   sourceRenamed(data) {
-    // {"newName":"test","previousName":"test scene","sourceType":"scene","update-type":"SourceRenamed"}'
     if (data.sourceType === 'scene') {
       this.renameScene(data.previousName, data.newName)
     }
+  }
+  sourceDestroyed(data) {
+    if (data.sourceType === 'scene') {
+      this.deleteScene(data.sourceName)
+    }
+  }
+  sourceCreated(data) {
+    if (data.sourceType === 'scene') {
+      this.logger.info(`Created scene '${data.sourceName}'`)
+    }
+  }
+  scenesChanged (data) {
+    this.logger.info('A scene changed')
   }
   /////////////////////////////////////////////////////////////////////////////
 
