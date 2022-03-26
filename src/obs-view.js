@@ -270,7 +270,7 @@ export default class OBSView {
   setCurrentScene (scene) {
     if (this.sceneAliases.has(scene)) {
       const s = {}
-      s['scene-name'] = scene
+      s['scene-name'] = this.sceneAliases.get(scene)
       this.obs.send('SetCurrentScene', s)
         .catch(e => { this.logger.error(`OBS error switching scenes: ${JSON.stringify(e, null, 2)}`) })
     }
@@ -414,7 +414,8 @@ export default class OBSView {
   }
 
   scenesChanged (data) {
-    this.logger.info('A scene changed')
+    this.logger.info('Scenes need updating')
+    //this.updateScenes(data.scenes)
   }
   /// //////////////////////////////////////////////////////////////////////////
 

@@ -15,10 +15,10 @@ export default class Herder {
     }
 
     const words = txt.trim().toLowerCase()
+      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
       .replace(/[a-z]+[\s]+[\d]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
       .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
       .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
-      .replace(/[!]+[\S]+[\s]+/, '') // remove the !cam at the beginning
       .split(/[\s]+/) // split on whitespace
 
     words.forEach(cmd => {
