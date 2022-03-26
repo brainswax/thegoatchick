@@ -407,7 +407,7 @@ export default class OBSView {
     }))
   }
 
-  async addSourceItem(sourceName, type, sceneName) {
+  async addSourceItem (sourceName, type, sceneName) {
     const sceneItem = { item: sourceName }
     sceneItem['scene-name'] = sceneName
 
@@ -444,11 +444,9 @@ export default class OBSView {
   sourceRenamed (data) {
     if (data.sourceType === 'scene') {
       this.renameScene(data.previousName, data.newName)
-    }
-    else if (data.sourceType === 'input') {
+    } else if (data.sourceType === 'input') {
       this.renameSource(data.previousName, data.newName, this.currentScene)
-    }
-    else {
+    } else {
       this.logger.info(`Renamed source '${JSON.stringify(data, null, 2)}'`)
     }
   }
@@ -456,11 +454,9 @@ export default class OBSView {
   sourceDestroyed (data) {
     if (data.sourceType === 'scene') {
       this.deleteScene(data.sourceName)
-    }
-    else if (data.sourceType === 'input') {
+    } else if (data.sourceType === 'input') {
       this.deleteSource(data.sourceName, this.currentScene)
-    }
-    else {
+    } else {
       this.logger.info(`Deleted source '${JSON.stringify(data, null, 2)}'`)
     }
   }
@@ -468,13 +464,11 @@ export default class OBSView {
   sourceCreated (data) {
     if (data.sourceType === 'scene') {
       this.logger.info(`Created scene '${data.sourceName}'`)
-    }
-    else if (data.sourceType === 'input') {
+    } else if (data.sourceType === 'input') {
       this.logger.info(`Created source '${data.sourceName}' for scene '${this.currentScene}'`)
 
       this.addSourceItem(data.sourceName, data.sourceKind, this.currentScene)
         .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${JSON.stringify(e)}`))
-
     } else this.logger.info(`Created source '${JSON.stringify(data, null, 2)}'`)
   }
 
