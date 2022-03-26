@@ -263,6 +263,30 @@ export default class OBSView {
     }
   }
 
+  renameSource(oldName, newName, sceneName) {
+    if (oldName in this.scenes[sceneName].sources && oldName !== newName) {
+      // Copy the old source
+      this.scenes[sceneName].sources[newName] = this.scenes[sceneName].sources[oldName]
+      this.scenes[sceneName].sources[newName].name = newName
+      delete this.scenes[sceneName].sources[oldName]
+
+      // Remove old aliases
+      Object.keys(this.scenes[sceneName].aliases).forEach(k => {
+        if (this.scenes[sceneName].aliases[k] === oldName) {
+          delete this.scenes[sceneName].aliases[k]
+        }
+      })
+
+      // Add new aliases
+      this.scenes[sceneName].aliases[newName.toLowerCase().replace(/\W/g, '-')] = newName
+
+      // Update cams
+      for (let i = 0; i < this.scenes[sceneName].cams.length; i++) {
+        if (this.scenes[sceneName].cams[i] === oldName) this.scenes[sceneName].cams[i] = newName
+      }
+    }
+  }
+
   getScenes () {
     return Array.from(this.sceneAliases.keys())
   }
@@ -408,6 +432,9 @@ export default class OBSView {
   sourceRenamed (data) {
     if (data.sourceType === 'scene') {
       this.renameScene(data.previousName, data.newName)
+    }
+    else if (data.sourceType === 'input') {
+      this.renameSource(data.previousName, data.newName, this.currentScene)
     }
     else {
       this.logger.info(`Renamed source '${JSON.stringify(data, null, 2)}'`)
