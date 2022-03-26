@@ -275,6 +275,27 @@ export default class OBSView {
     }
   }
 
+  renameScene (oldName, newName) {
+    if (oldName in this.scenes) {
+      // replace aliases
+      for (const [k, v] of this.sceneAliases.entries()) {
+        if (oldName == v) {
+          this.sceneAliases.delete(k)
+        }
+      }
+      this.sceneAliases.set(newName.toLowerCase().replace(/\W/g, '-'), newName)
+
+      // replace scenes
+      this.scenes[newName] = this.scenes[oldName]
+      delete this.scenes[oldName]
+
+      if (this.currentScene === oldName) this.currentScene = newName
+
+      this.logger.info(`Renamed scene '${oldName}' to '${newName}'`)
+    }
+  }
+
+  // Handlers for OBS events //////////////////////////////////////////////////
   sceneItemVisibilityChanged (data) {
     this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
   }
@@ -293,6 +314,13 @@ export default class OBSView {
       this.currentScene = data.sceneName
     }
   }
+  sourceRenamed(data) {
+    // {"newName":"test","previousName":"test scene","sourceType":"scene","update-type":"SourceRenamed"}'
+    if (data.sourceType === 'scene') {
+      this.renameScene(data.previousName, data.newName)
+    }
+  }
+  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * Given an obs connection, grab all the scenes and resources to construct the cams and windows

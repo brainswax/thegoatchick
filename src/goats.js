@@ -201,6 +201,7 @@ class AdminStore {
   obs.on('SourceOrderChanged', data => obsView.sourceOrderChanged(data))
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
   obs.on('SwitchScenes', data => obsView.switchScenes(data))
+  obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
