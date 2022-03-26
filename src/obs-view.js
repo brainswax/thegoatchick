@@ -265,14 +265,18 @@ export default class OBSView {
 
   deleteSource (sourceName, sceneName) {
     // Remove from the scenes sources
-    if (sourceName in this.scenes[sceneName].sources) delete this.scenes[sceneName].sources[sourceName]
+    if (sourceName in this.scenes[sceneName].sources) {
+      delete this.scenes[sceneName].sources[sourceName]
 
-    // Remove from aliases
-    Object.keys(this.scenes[sceneName].aliases).forEach(k => {
-      if (this.scenes[sceneName].aliases[k] === sourceName) {
-        delete this.scenes[sceneName].aliases[k]
-      }
-    })
+      // Remove from aliases
+      Object.keys(this.scenes[sceneName].aliases).forEach(k => {
+        if (this.scenes[sceneName].aliases[k] === sourceName) {
+          delete this.scenes[sceneName].aliases[k]
+        }
+      })
+
+      this.logger.info(`Deleted source '${sourceName}' from scene '${sceneName}'`)
+    }
   }
 
   renameSource (oldName, newName, sceneName) {
@@ -296,6 +300,7 @@ export default class OBSView {
       for (let i = 0; i < this.scenes[sceneName].cams.length; i++) {
         if (this.scenes[sceneName].cams[i] === oldName) this.scenes[sceneName].cams[i] = newName
       }
+      this.logger.info(`Renamed source '${oldName}' to '${newName}' in scene '${sceneName}'`)
     }
   }
 
@@ -419,6 +424,7 @@ export default class OBSView {
       .then(() => { // Add an alias for the new source
         this.scenes[sceneName].aliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceName
       })
+      .then(() => this.logger.info(`Added source '${sourceName}' for scene '${sceneName}'`))
   }
 
   // Handlers for OBS events //////////////////////////////////////////////////
@@ -462,11 +468,9 @@ export default class OBSView {
   }
 
   sourceCreated (data) {
-    if (data.sourceType === 'scene') {
+    if (data.sourceType === 'scene') { // Only log; OBS will trigger a ScenesChanged event
       this.logger.info(`Created scene '${data.sourceName}'`)
     } else if (data.sourceType === 'input') {
-      this.logger.info(`Created source '${data.sourceName}' for scene '${this.currentScene}'`)
-
       this.addSourceItem(data.sourceName, data.sourceKind, this.currentScene)
         .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${JSON.stringify(e)}`))
     } else this.logger.info(`Created source '${JSON.stringify(data, null, 2)}'`)
