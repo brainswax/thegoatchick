@@ -266,9 +266,10 @@ export default class OBSView {
   getScenes () {
     return Array.from(this.sceneAliases.keys())
   }
-  setCurrentScene(scene) {
+
+  setCurrentScene (scene) {
     if (this.sceneAliases.has(scene)) {
-      let s = {}
+      const s = {}
       s['scene-name'] = scene
       this.obs.send('SetCurrentScene', s)
         .catch(e => { this.logger.error(`OBS error switching scenes: ${JSON.stringify(e, null, 2)}`) })
@@ -279,7 +280,7 @@ export default class OBSView {
     if (oldName in this.scenes) {
       // replace aliases
       for (const [k, v] of this.sceneAliases.entries()) {
-        if (oldName == v) {
+        if (oldName === v) {
           this.sceneAliases.delete(k)
         }
       }
@@ -298,104 +299,58 @@ export default class OBSView {
   deleteScene (sceneName) {
     if (sceneName in this.scenes) delete this.scenes[sceneName]
     for (const [k, v] of this.sceneAliases.entries()) {
-      if (sceneName == v) {
+      if (sceneName === v) {
         this.sceneAliases.delete(k)
       }
     }
     this.logger.info(`Deleted scene '${sceneName}'`)
   }
 
-  // Handlers for OBS events //////////////////////////////////////////////////
-  sceneItemVisibilityChanged (data) {
-    this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
-  }
-  sourceOrderChanged (data) {
-    this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
-  }
-  sceneItemVisibilityChanged (data) {
-    this.logger.debug(`sceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
-  }
-  sceneItemTransformChanged (data) {
-    this.logger.debug(`sceneItemTransformChanged: ${JSON.stringify(data, null, 2)}`)
-  }
-  switchScenes (data) {
-    if (this.currentScene !== data.sceneName) {
-      this.logger.info(`OBS switched scene from '${this.currentScene}' to '${data.sceneName}'`)
-      this.currentScene = data.sceneName
-    }
-  }
-  sourceRenamed(data) {
-    if (data.sourceType === 'scene') {
-      this.renameScene(data.previousName, data.newName)
-    }
-  }
-  sourceDestroyed(data) {
-    if (data.sourceType === 'scene') {
-      this.deleteScene(data.sourceName)
-    }
-  }
-  sourceCreated(data) {
-    if (data.sourceType === 'scene') {
-      this.logger.info(`Created scene '${data.sourceName}'`)
-    }
-  }
-  scenesChanged (data) {
-    this.logger.info('A scene changed')
-  }
-  /////////////////////////////////////////////////////////////////////////////
+  async updateScenes (scenes) {
+    this.scenes = {}
 
-  /**
-   * Given an obs connection, grab all the scenes and resources to construct the cams and windows
-   */
-  async syncFromObs () {
-    // Grab all the scenes from OBS
-    return this.obs.send('GetSceneList')
-      .then(async data => {
-        this.scenes = {}
-        this.currentScene = data['current-scene']
+    // For each scene, request the properties for each source
+    return Promise.all(scenes.map(async scene => {
+      this.logger.debug(`### scene '${scene.name}'`)
+      this.scenes[scene.name] = {
+        name: scene.name,
+        sources: {},
+        aliases: {},
+        windows: [],
+        changed: new Set(),
+        changedWindows: new Set(),
+        cams: []
+      }
 
-        this.logger.info(`Current OBS scene: '${this.currentScene}'`)
+      this.sceneAliases.set(scene.name.toLowerCase().replace(/\W/g, '-'), scene.name)
+      return Promise.all(scene.sources.map(async source => {
+        this.logger.debug(`### scene '${scene.name}' source '${source.name}'`)
+        // Automatically add an alias
+        this.scenes[scene.name].aliases[source.name.toLowerCase().replace(/\W/g, '-')] = source.name
 
-        // For each scene, request the properties for each source
-        await Promise.all(data.scenes.map(async scene => {
-          this.scenes[scene.name] = {
-            name: scene.name,
-            sources: {},
-            aliases: {},
-            windows: [],
-            changed: new Set(),
-            changedWindows: new Set(),
-            cams: []
-          }
+        // Request properties for each source
+        const sceneItem = { item: source.name }
+        sceneItem['scene-name'] = scene.name
+        return this.obs.send('GetSceneItemProperties', sceneItem)
+          .then(s => {
+            this.scenes[scene.name].sources[source.name] = s
+            this.scenes[scene.name].sources[source.name].source_cx = source.source_cx
+            this.scenes[scene.name].sources[source.name].source_cy = source.source_cy
+            this.scenes[scene.name].sources[source.name].type = source.type
 
-          this.sceneAliases.set(scene.name.toLowerCase().replace(/\W/g, '-'), scene.name)
-          await Promise.all(scene.sources.map(async source => {
-            // Automatically add an alias
-            this.scenes[scene.name].aliases[source.name.toLowerCase().replace(/\W/g, '-')] = source.name
-
-            // Request properties for each source
-            let sceneItem = { item: source.name }
-            sceneItem['scene-name'] = scene.name
-            await this.obs.send('GetSceneItemProperties', sceneItem)
-              .then(async s => {
-                this.scenes[scene.name].sources[source.name] = s
-                this.scenes[scene.name].sources[source.name].source_cx = source.source_cx
-                this.scenes[scene.name].sources[source.name].source_cy = source.source_cy
-                this.scenes[scene.name].sources[source.name].type = source.type
-
-                if (s.visible && this.windowTypes.includes(s.type)) { // Only visible media sources are treated as windows
-                  this.scenes[scene.name].windows.push({
-                    source: s.name,
-                    position: s.position,
-                    width: s.width,
-                    height: s.height
-                  })
-                }
+            if (s.visible && this.windowTypes.includes(s.type)) { // Only visible media sources are treated as windows
+              this.scenes[scene.name].windows.push({
+                source: s.name,
+                position: s.position,
+                width: s.width,
+                height: s.height
               })
-              .catch(e => this.logger.error(`Error getting scene properties for scene: ${scene.name}, source: ${source.name}: ${JSON.stringify(e)}`))
-          }))
-
-          // Sort the windows based on their position on the screen to get cam0, cam1, etc.
+            }
+          })
+          .catch(e => this.logger.error(`Error getting scene properties for scene: ${scene.name}, source: ${source.name}: ${JSON.stringify(e)}`))
+      }))
+        .then(() => {
+        // Sort the windows based on their position on the screen to get cam0, cam1, etc.
           this.scenes[scene.name].windows.sort((a, b) => {
             if (a.width * a.height > b.width * b.height) return -1 // Window 'a' is bigger
             else if (a.width * a.height < b.width * b.height) return 1 // Window 'b' is bigger
@@ -416,11 +371,67 @@ export default class OBSView {
           this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source) // Get the names from the sorted list
           this.scenes[scene.name].windows.forEach(w => delete w.source)
           this.updateWindows(scene.name)
-        }))
-          .then(() => {
-            this.logger.info(`Loaded OBS scenes: '${Object.keys(this.scenes).join('\', \'')}'`)
-            this.logger.debug(`OBS Scenes: ${JSON.stringify(this.scenes, null, 2)}`)
-          })
+        })
+    }))
+  }
+
+  // Handlers for OBS events //////////////////////////////////////////////////
+  sourceOrderChanged (data) {
+    this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
+  }
+
+  sceneItemVisibilityChanged (data) {
+    this.logger.debug(`sceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
+  }
+
+  sceneItemTransformChanged (data) {
+    this.logger.debug(`sceneItemTransformChanged: ${JSON.stringify(data, null, 2)}`)
+  }
+
+  switchScenes (data) {
+    if (this.currentScene !== data.sceneName) {
+      this.logger.info(`OBS switched scene from '${this.currentScene}' to '${data.sceneName}'`)
+      this.currentScene = data.sceneName
+    }
+  }
+
+  sourceRenamed (data) {
+    if (data.sourceType === 'scene') {
+      this.renameScene(data.previousName, data.newName)
+    }
+  }
+
+  sourceDestroyed (data) {
+    if (data.sourceType === 'scene') {
+      this.deleteScene(data.sourceName)
+    }
+  }
+
+  sourceCreated (data) {
+    if (data.sourceType === 'scene') {
+      this.logger.info(`Created scene '${data.sourceName}'`)
+    }
+  }
+
+  scenesChanged (data) {
+    this.logger.info('A scene changed')
+  }
+  /// //////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Given an obs connection, grab all the scenes and resources to construct the cams and windows
+   */
+  async syncFromObs () {
+    // Grab all the scenes from OBS
+    return this.obs.send('GetSceneList')
+      .then(async data => {
+        this.currentScene = data['current-scene']
+        return this.updateScenes(data.scenes)
+      })
+      .then(() => {
+        this.logger.info(`Current OBS scene: '${this.currentScene}'`)
+        this.logger.info(`Loaded OBS scenes: '${Object.keys(this.scenes).join('\', \'')}'`)
+        this.logger.debug(`OBS Scenes: ${JSON.stringify(this.scenes, null, 2)}`)
       })
   }
 
