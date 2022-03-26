@@ -311,7 +311,6 @@ export default class OBSView {
 
     // For each scene, request the properties for each source
     return Promise.all(scenes.map(async scene => {
-      this.logger.debug(`### scene '${scene.name}'`)
       this.scenes[scene.name] = {
         name: scene.name,
         sources: {},
@@ -324,7 +323,6 @@ export default class OBSView {
 
       this.sceneAliases.set(scene.name.toLowerCase().replace(/\W/g, '-'), scene.name)
       return Promise.all(scene.sources.map(async source => {
-        this.logger.debug(`### scene '${scene.name}' source '${source.name}'`)
         // Automatically add an alias
         this.scenes[scene.name].aliases[source.name.toLowerCase().replace(/\W/g, '-')] = source.name
 
@@ -334,8 +332,6 @@ export default class OBSView {
         return this.obs.send('GetSceneItemProperties', sceneItem)
           .then(s => {
             this.scenes[scene.name].sources[source.name] = s
-            this.scenes[scene.name].sources[source.name].source_cx = source.source_cx
-            this.scenes[scene.name].sources[source.name].source_cy = source.source_cy
             this.scenes[scene.name].sources[source.name].type = source.type
 
             if (s.visible && this.windowTypes.includes(s.type)) { // Only visible media sources are treated as windows
@@ -375,6 +371,20 @@ export default class OBSView {
     }))
   }
 
+  async addSourceItem(sourceName, type, sceneName) {
+    const sceneItem = { item: sourceName }
+    sceneItem['scene-name'] = sceneName
+
+    return this.obs.send('GetSceneItemProperties', sceneItem) // Get the source info from obs
+      .then(source => { // Add the source to the scene
+        this.scenes[sceneName].sources[source.name] = source
+        this.scenes[sceneName].sources[source.name].type = type
+      })
+      .then(() => { // Add an alias for the new source
+        this.scenes[sceneName].aliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceName
+      })
+  }
+
   // Handlers for OBS events //////////////////////////////////////////////////
   sourceOrderChanged (data) {
     this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
@@ -399,11 +409,17 @@ export default class OBSView {
     if (data.sourceType === 'scene') {
       this.renameScene(data.previousName, data.newName)
     }
+    else {
+      this.logger.info(`Renamed source '${JSON.stringify(data, null, 2)}'`)
+    }
   }
 
   sourceDestroyed (data) {
     if (data.sourceType === 'scene') {
       this.deleteScene(data.sourceName)
+    }
+    else {
+      this.logger.info(`Deleted source '${JSON.stringify(data, null, 2)}'`)
     }
   }
 
@@ -411,11 +427,18 @@ export default class OBSView {
     if (data.sourceType === 'scene') {
       this.logger.info(`Created scene '${data.sourceName}'`)
     }
+    else if (data.sourceType === 'input') {
+      this.logger.info(`Created source '${data.sourceName}' for scene '${this.currentScene}'`)
+
+      this.addSourceItem(data.sourceName, data.sourceKind, this.currentScene)
+        .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${JSON.stringify(e)}`))
+
+    } else this.logger.info(`Created source '${JSON.stringify(data, null, 2)}'`)
   }
 
   scenesChanged (data) {
-    this.logger.info('Scenes need updating')
-    //this.updateScenes(data.scenes)
+    this.logger.info('Updating scenes')
+    this.updateScenes(data.scenes)
   }
   /// //////////////////////////////////////////////////////////////////////////
 
@@ -449,8 +472,8 @@ export default class OBSView {
             position: window.position,
             scale: {
               filter: this.scenes[scene].sources[name].scale.filter || 'OBS_SCALE_DISABLE',
-              x: window.width / this.scenes[scene].sources[name].source_cx,
-              y: window.height / this.scenes[scene].sources[name].source_cy
+              x: window.width / this.scenes[scene].sources[name].sourceWidth,
+              y: window.height / this.scenes[scene].sources[name].sourceHeight
             },
             visible: true
           })
