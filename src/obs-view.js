@@ -263,7 +263,19 @@ export default class OBSView {
     }
   }
 
-  renameSource(oldName, newName, sceneName) {
+  deleteSource (sourceName, sceneName) {
+    // Remove from the scenes sources
+    if (sourceName in this.scenes[sceneName].sources) delete this.scenes[sceneName].sources[sourceName]
+
+    // Remove from aliases
+    Object.keys(this.scenes[sceneName].aliases).forEach(k => {
+      if (this.scenes[sceneName].aliases[k] === sourceName) {
+        delete this.scenes[sceneName].aliases[k]
+      }
+    })
+  }
+
+  renameSource (oldName, newName, sceneName) {
     if (oldName in this.scenes[sceneName].sources && oldName !== newName) {
       // Copy the old source
       this.scenes[sceneName].sources[newName] = this.scenes[sceneName].sources[oldName]
@@ -444,6 +456,9 @@ export default class OBSView {
   sourceDestroyed (data) {
     if (data.sourceType === 'scene') {
       this.deleteScene(data.sourceName)
+    }
+    else if (data.sourceType === 'input') {
+      this.deleteSource(data.sourceName, this.currentScene)
     }
     else {
       this.logger.info(`Deleted source '${JSON.stringify(data, null, 2)}'`)
