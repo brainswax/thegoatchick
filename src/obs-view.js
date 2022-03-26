@@ -8,6 +8,7 @@ export default class OBSView {
 
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenes = {}
+    this.sceneAliases = new Map()
     this.currentScene = ''
 
     this.commands = new Map()
@@ -262,6 +263,37 @@ export default class OBSView {
     }
   }
 
+  getScenes () {
+    return Array.from(this.sceneAliases.keys())
+  }
+  setCurrentScene(scene) {
+    if (this.sceneAliases.has(scene)) {
+      let s = {}
+      s['scene-name'] = scene
+      this.obs.send('SetCurrentScene', s)
+        .catch(e => { this.logger.error(`OBS error switching scenes: ${JSON.stringify(e, null, 2)}`) })
+    }
+  }
+
+  sceneItemVisibilityChanged (data) {
+    this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
+  }
+  sourceOrderChanged (data) {
+    this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
+  }
+  sceneItemVisibilityChanged (data) {
+    this.logger.debug(`sceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
+  }
+  sceneItemTransformChanged (data) {
+    this.logger.debug(`sceneItemTransformChanged: ${JSON.stringify(data, null, 2)}`)
+  }
+  switchScenes (data) {
+    if (this.currentScene !== data.sceneName) {
+      this.logger.info(`OBS switched scene from '${this.currentScene}' to '${data.sceneName}'`)
+      this.currentScene = data.sceneName
+    }
+  }
+
   /**
    * Given an obs connection, grab all the scenes and resources to construct the cams and windows
    */
@@ -286,53 +318,54 @@ export default class OBSView {
             cams: []
           }
 
-          if (scene.name === this.currentScene) { // TODO: grab all the scenes
-            await Promise.all(scene.sources.map(async source => {
-              // Automatically add an alias
-              this.scenes[scene.name].aliases[source.name.toLowerCase().replace(/\W+/, '-')] = source.name
+          this.sceneAliases.set(scene.name.toLowerCase().replace(/\W/g, '-'), scene.name)
+          await Promise.all(scene.sources.map(async source => {
+            // Automatically add an alias
+            this.scenes[scene.name].aliases[source.name.toLowerCase().replace(/\W/g, '-')] = source.name
 
-              // Request properties for each source
-              await this.obs.send('GetSceneItemProperties', { scene: scene.name, item: source.name })
-                .then(async s => {
-                  this.scenes[scene.name].sources[source.name] = s
-                  this.scenes[scene.name].sources[source.name].source_cx = source.source_cx
-                  this.scenes[scene.name].sources[source.name].source_cy = source.source_cy
-                  this.scenes[scene.name].sources[source.name].type = source.type
+            // Request properties for each source
+            let sceneItem = { item: source.name }
+            sceneItem['scene-name'] = scene.name
+            await this.obs.send('GetSceneItemProperties', sceneItem)
+              .then(async s => {
+                this.scenes[scene.name].sources[source.name] = s
+                this.scenes[scene.name].sources[source.name].source_cx = source.source_cx
+                this.scenes[scene.name].sources[source.name].source_cy = source.source_cy
+                this.scenes[scene.name].sources[source.name].type = source.type
 
-                  if (s.visible && this.windowTypes.includes(s.type)) { // Only visible media sources are treated as windows
-                    this.scenes[scene.name].windows.push({
-                      source: s.name,
-                      position: s.position,
-                      width: s.width,
-                      height: s.height
-                    })
-                  }
-                })
-                .catch(e => this.logger.error(`Error getting scene properties: scene: ${scene}, source: ${source.name}`))
-            }))
+                if (s.visible && this.windowTypes.includes(s.type)) { // Only visible media sources are treated as windows
+                  this.scenes[scene.name].windows.push({
+                    source: s.name,
+                    position: s.position,
+                    width: s.width,
+                    height: s.height
+                  })
+                }
+              })
+              .catch(e => this.logger.error(`Error getting scene properties for scene: ${scene.name}, source: ${source.name}: ${JSON.stringify(e)}`))
+          }))
 
-            // Sort the windows based on their position on the screen to get cam0, cam1, etc.
-            this.scenes[scene.name].windows.sort((a, b) => {
-              if (a.width * a.height > b.width * b.height) return -1 // Window 'a' is bigger
-              else if (a.width * a.height < b.width * b.height) return 1 // Window 'b' is bigger
-              else { // The windows are the same size, sort by distance from the origin
-                const adist = Math.sqrt(a.position.x ** 2 + a.position.y ** 2)
-                const bdist = Math.sqrt(b.position.x ** 2 + b.position.y ** 2)
-                if (adist < bdist) return -1 // Window 'a' is closer to the top left
-                else if (adist < bdist) return 1 // Window 'b' is closer to the top left
-                else if (a.position.x < b.position.x) return -1 // Window 'a' is closer to the left
-                else if (a.position.x > b.position.x) return 1 // Window 'b' is closer to the left
-                else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
-                else if (a.position.y > b.position.y) return 1 // Window 'a' is closer to the left
-              }
+          // Sort the windows based on their position on the screen to get cam0, cam1, etc.
+          this.scenes[scene.name].windows.sort((a, b) => {
+            if (a.width * a.height > b.width * b.height) return -1 // Window 'a' is bigger
+            else if (a.width * a.height < b.width * b.height) return 1 // Window 'b' is bigger
+            else { // The windows are the same size, sort by distance from the origin
+              const adist = Math.sqrt(a.position.x ** 2 + a.position.y ** 2)
+              const bdist = Math.sqrt(b.position.x ** 2 + b.position.y ** 2)
+              if (adist < bdist) return -1 // Window 'a' is closer to the top left
+              else if (adist < bdist) return 1 // Window 'b' is closer to the top left
+              else if (a.position.x < b.position.x) return -1 // Window 'a' is closer to the left
+              else if (a.position.x > b.position.x) return 1 // Window 'b' is closer to the left
+              else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
+              else if (a.position.y > b.position.y) return 1 // Window 'a' is closer to the left
+            }
 
-              return 0 // The windows are the same size and position
-            })
+            return 0 // The windows are the same size and position
+          })
 
-            this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source) // Get the names from the sorted list
-            this.scenes[scene.name].windows.forEach(w => delete w.source)
-            this.updateWindows(scene.name)
-          }
+          this.scenes[scene.name].cams = this.scenes[scene.name].windows.map(w => w.source) // Get the names from the sorted list
+          this.scenes[scene.name].windows.forEach(w => delete w.source)
+          this.updateWindows(scene.name)
         }))
           .then(() => {
             this.logger.info(`Loaded OBS scenes: '${Object.keys(this.scenes).join('\', \'')}'`)

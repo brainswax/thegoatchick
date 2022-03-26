@@ -7,7 +7,8 @@ import { Stojo } from '@codegrill/stojo'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 import crypto from 'crypto'
-import WindowHandler from './windowHandler.mjs'
+import WindowHerder from './windowHerder.mjs'
+import SceneHerder from './sceneHerder.mjs'
 
 cenv.env(process.env.NODE_ENV)
 
@@ -196,6 +197,10 @@ class AdminStore {
   })
   obs.on('AuthenticationSuccess', () => { logger.info('== OBS successfully authenticated') })
   obs.on('AuthenticationFailure', () => { logger.info('== OBS failed authentication') })
+  obs.on('SceneItemVisibilityChanged', data => obsView.sceneItemVisibilityChanged(data))
+  obs.on('SourceOrderChanged', data => obsView.sourceOrderChanged(data))
+  obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
+  obs.on('SwitchScenes', data => obsView.switchScenes(data))
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
@@ -264,15 +269,18 @@ class AdminStore {
   }
 
   // This will process !camN commands to view and manage windows for cams/views
-  app.windowHandler = new WindowHandler({
-    logger: logger,
-    twitch: {
-      chat: chat,
-      channel: process.env.TWITCH_CHANNEL
-    },
-    obsView: obsView
-  })
-
+  {
+    const options = {
+      logger: logger,
+      twitch: {
+        chat: chat,
+        channel: process.env.TWITCH_CHANNEL
+      },
+      obsView: obsView
+    }
+    app.windowHerder = new WindowHerder(options)
+    app.sceneHerder = new SceneHerder(options)
+  }
   function sayForSubs () {
     chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for Subscribers')
   }
@@ -295,7 +303,7 @@ class AdminStore {
       switch (match) {
         // ANYONE COMMANDS
         case '!cams': {
-          const sources = obsView.getSources(app.config.windows.sourceTypes).map(s => app.ptz.names.includes(s) ? `${s.replace(/\W+/, '-')} (ptz)` : s.replace(/\W+/, '-'))
+          const sources = obsView.getSources(app.config.windows.sourceTypes).map(s => app.ptz.names.includes(s) ? `${s.replace(/\W/g, '-')} (ptz)` : s.replace(/\W/g, '-'))
           // Put PTZ cams first, then sort alphabetically
           sources.sort((a, b) => {
             if (a.includes('ptz') && !b.includes('ptz')) return -1
@@ -328,6 +336,14 @@ class AdminStore {
           // Automatically show the 'does' camera at the 'bell' shortcut if it's not already shown
           if (!obsView.inView('does')) obsView.processChat('2does')
           if (app.ptz.cams.has('does')) app.ptz.cams.get('does').moveToShortcut('bell')
+          break
+        case '!scene':
+        case '!scenes':
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
+            sayForSubs()
+            break
+          }
+          app.sceneHerder.herd(match, str)
           break
 
         // MOD COMMANDS
@@ -472,7 +488,7 @@ class AdminStore {
             }
             if (match.startsWith('!cam') && match.length > '!cam'.length) {
               if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
-                app.windowHandler.handleWindow(match, str)
+                app.windowHerder.handleWindow(match, str)
               } else sayForMods()
             }
           }
