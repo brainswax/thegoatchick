@@ -449,6 +449,21 @@ export default class OBSView {
     }
   }
 
+  updateSourceWindow (sourceName, sceneName) {
+    const cams = this.scenes[sceneName || this.currentScene].cams
+    const windows = this.scenes[sceneName || this.currentScene].windows
+    const source = this.scenes[sceneName || this.currentScene].sources[sourceName]
+    for (let i = 0; i < cams.length; i++) {
+      if (cams[i] === sourceName) { // Found the source in current visible cams
+        windows[i].position.x = source.position.x
+        windows[i].position.y = source.position.y
+        windows[i].width = source.width
+        windows[i].height = source.height
+        break
+      }
+    }
+  }
+
   /**
    * Find a source from any of the scenes and return the kind if there is one.
    *
@@ -494,9 +509,8 @@ export default class OBSView {
 
         // Update cams
         this.renameCams(oldName, newName, sceneName)
-
-        }
-        this.logger.info(`Renamed source '${oldName}' to '${newName}'`)
+      }
+      this.logger.info(`Renamed source '${oldName}' to '${newName}'`)
     }
   }
 
@@ -559,6 +573,9 @@ export default class OBSView {
 
       // Make sure there's an alias
       this.addSourceAlias(source.name, source.name, sceneName)
+
+      // If it's currently in a window, update the window dimensions
+      this.updateSourceWindow(source.name, sceneName)
 
       this.logger.info(`Updated source '${source.name}' in scene '${sceneName}'`)
       this.logger.debug(`Updated source '${source.name}' in scene '${sceneName}': ${JSON.stringify(source, null, 2)}`)
