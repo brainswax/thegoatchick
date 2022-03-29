@@ -137,10 +137,7 @@ class ScenesRenderer {
           scenes[scene.name] = scene
         })
     }))
-      .then(() => {
-        this.logger.debug('### scenes updating')
-        return scenes
-      })
+      .then(() => scenes)
   }
 }
 
@@ -479,23 +476,27 @@ export default class OBSView {
     }
   }
 
-  renameSource (oldName, newName, sceneName) {
-    if (oldName in this.scenes[sceneName].sources && oldName !== newName) {
-      // Copy the old source
-      this.scenes[sceneName].sources[newName] = this.scenes[sceneName].sources[oldName]
-      this.scenes[sceneName].sources[newName].name = newName
-      delete this.scenes[sceneName].sources[oldName]
+  renameSource (oldName, newName) {
+    // Source names are unique in OBS, so if you rename one, it will change the name in every scene
+    if (oldName !== newName) {
+      for (const sceneName in this.scenes) {
+        if (oldName in this.scenes[sceneName].sources) {
+          this.scenes[sceneName].sources[newName] = this.scenes[sceneName].sources[oldName]
+          this.scenes[sceneName].sources[newName].name = newName
+          delete this.scenes[sceneName].sources[oldName]
+        }
 
-      // Remove old aliases
-      this.removeAliasesForSource(oldName, sceneName)
+        // Remove old aliases
+        this.removeAliasesForSource(oldName, sceneName)
 
-      // Add new aliases
-      this.addSourceAlias(newName, newName, sceneName)
+        // Add new aliases
+        this.addSourceAlias(newName, newName, sceneName)
 
-      // Update cams
-      this.renameCams(oldName, newName, sceneName)
+        // Update cams
+        this.renameCams(oldName, newName, sceneName)
 
-      this.logger.info(`Renamed source '${oldName}' to '${newName}' in scene '${sceneName}'`)
+        }
+        this.logger.info(`Renamed source '${oldName}' to '${newName}'`)
     }
   }
 
@@ -598,19 +599,18 @@ export default class OBSView {
   }
 
   sourceRenamed (data) {
-    const sceneName = data.sceneName ? data.sceneName : this.currentScene
     switch (data.sourceType) {
       case 'scene':
         this.renameScene(data.previousName, data.newName)
         break
       case 'input':
-        this.renameSource(data.previousName, data.newName, sceneName)
+        this.renameSource(data.previousName, data.newName)
         break
       case 'group':
-        this.logger.info(`Renamed group '${data.sourceName}' in scene '${sceneName}'`)
+        this.logger.info(`Renamed group '${data.sourceName}'`)
         break
       default: // Shouldn't get here. Warn.
-        this.logger.warn(`Renamed source '${data.sourceName}' of unknown type '${data.sourceType}' in scene '${sceneName}'`)
+        this.logger.warn(`Renamed source '${data.sourceName}' of unknown type '${data.sourceType}'`)
     }
   }
 
