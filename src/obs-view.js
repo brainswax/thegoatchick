@@ -700,6 +700,7 @@ export default class OBSView {
   Update OBS with only the cameras that have changed
   */
   updateOBS (sceneName) {
+    sceneName = sceneName || this.currentScene
     if (sceneName) {
       const windows = getWindows(this.scenes[sceneName])
 
