@@ -31,7 +31,7 @@ function getSourceAliases (sources) {
 
 function getSceneCams (windows) {
   const cams = []
-  windows.forEach(window => cams.push(window.name))
+  windows.forEach(window => cams.push(window.source))
   return cams
 }
 
@@ -59,7 +59,7 @@ function getWindows (scene) {
   if (scene && scene.windows) {
     let i = 0
     scene.windows.forEach(window => {
-      if (scene.cams && scene.cams.length < i && scene.cams[i]) {
+      if (scene.cams && scene.cams.length > i) {
         const sourceName = scene.cams[i++]
         windows.push({
           item: sourceName,
@@ -113,7 +113,7 @@ class ScenesUpdater {
   async getScene (sceneData) {
     const scene = {
       name: sceneData.name,
-      changed: new Set(),
+      changedCams: new Set(),
       changedWindows: new Set()
     }
 
@@ -133,7 +133,7 @@ class ScenesUpdater {
           scene.windows = getSceneWindows(scene, windowKinds)
           scene.windows.sort((a, b) => sortWindows(a, b)) // Sort the windows for cam0, cam1, etc.
           scene.cams = getSceneCams(scene.windows) // Depends on the order of the windows
-          scene.windows.forEach(window => { if (window.name) delete window.name }) // Don't need this now that we have sorted the windows
+          scene.windows.forEach(window => { if (window.source) delete window.source }) // Don't need this now that we have sorted the windows
           scenes[scene.name] = scene
         })
     }))
@@ -262,12 +262,12 @@ export default class OBSView {
     }
   }
 
-  getAliases (scene = this.currentScene) {
-    return this.scenes[scene].aliases
+  getAliases (scene) {
+    return this.scenes[scene ? scene : this.currentScene].aliases
   }
 
-  getWindows (scene = this.currentScene) {
-    return this.scenes[scene].windows
+  getWindows (scene) {
+    return this.scenes[scene ? scene : this.currentScene].windows
   }
 
   /**
@@ -327,26 +327,28 @@ export default class OBSView {
   setWindow (index, name) {
     if (this.currentScene && this.scenes[this.currentScene]) {
       let currentIndex = -1
-      this.logger.debug(`setWindow({ index: ${index}, name: ${name} }), current scene: ${this.currentScene}`)
+      this.logger.info(`Setting cam${index} to '${name}' for scene '${this.currentScene}'`)
 
       try {
-        // get index of where the view is currently
+        // get index of where the specified source is currently
         for (let x = 0; x < this.scenes[this.currentScene].cams.length; x++) {
           if (this.scenes[this.currentScene].cams[x] === name) currentIndex = x
         }
 
         if (index !== currentIndex) { // It's either not in a window or we're moving it to a different one
+          this.scenes[this.currentScene].changedCams.add(name)
           if (currentIndex > -1) { // It's already displayed in a window
             // Set the current window to whatever it's replacing
             const swap = this.scenes[this.currentScene].cams[index]
-            this.scenes[this.currentScene].changed.add(swap)
+            this.scenes[this.currentScene].changedCams.add(swap)
             this.scenes[this.currentScene].cams[currentIndex] = swap
+            this.logger.info(`Swapping cam${currentIndex} with '${swap}' for scene '${this.currentScene}'`)
           } else { // It's replacing, so let's disable the replaced camera
-            this.scenes[this.currentScene].changed.add(this.scenes[this.currentScene].cams[index])
+            this.scenes[this.currentScene].changedCams.add(this.scenes[this.currentScene].cams[index])
+            this.logger.info(`Source '${this.scenes[this.currentScene].cams[index]}' moved out of scene '${this.currentScene}'`)
           }
 
           this.scenes[this.currentScene].cams[index] = name
-          this.scenes[this.currentScene].changed.add(name)
         }
       } catch (e) { this.logger.error(`Error setting window: ${JSON.stringify(e)}`) }
     }
@@ -674,39 +676,40 @@ export default class OBSView {
     if (sceneName) {
       const windows = getWindows(this.scenes[sceneName])
 
-      if (this.scenes[sceneName].changed.length === 0) {
-        this.logger.debug('no cams were changed')
-      } else {
-        this.logger.info(`changed windows: ${JSON.stringify(Array.from(this.scenes[sceneName].changed))}`)
-        this.logger.debug(`updated windows: ${JSON.stringify(windows, null, '  ')}`)
+      if (this.scenes[sceneName].changedCams.size > 0) {
+        this.logger.info(`Changed cams: ${Array.from(this.scenes[sceneName].changedCams).join(', ')}`)
       }
+      if (this.scenes[sceneName].changedWindows.size > 0) {
+        this.logger.info(`Changed windows: ${Array.from(this.scenes[sceneName].changedWindows).join(', ')}`)
+      }
+      this.logger.debug(`Updated windows: ${JSON.stringify(windows, null, '  ')}`)
 
-      {
-        let i = 0
-        windows.forEach(window => {
-          if (this.scenes[sceneName].changed.has(window.item) || this.scenes[sceneName].changedWindows.has(i++)) {
-            this.obs.send('SetSceneItemProperties', window)
-              .then(() => this.scenes[sceneName].changed.delete(window.item))
-              .catch(err => { this.logger.warn(`Unable to set OBS properties '${window.item}' for scene '${sceneName}': ${JSON.stringify(err)}`) })
-            this.scenes[sceneName].changedWindows.delete(i - 1)
+      let i = 0
+      Promise.all(windows.map(async window => {
+        if (this.scenes[sceneName].changedCams.has(window.item) || this.scenes[sceneName].changedWindows.has(i++)) {
+          return this.obs.send('SetSceneItemProperties', window)
+            .catch(err => { this.logger.warn(`Unable to set OBS properties '${window.item}' for scene '${sceneName}': ${JSON.stringify(err)}`) })
+            .then(() => {
+              this.scenes[sceneName].changedCams.delete(window.item)
+              this.scenes[sceneName].changedWindows.delete(i - 1)
+            })
+        }
+      }))
+      .then(() => {
+        // Anything left needs to be hidden
+        this.scenes[sceneName].changedCams.forEach(cam => {
+          if (!this.scenes[sceneName].cams.includes(cam)) {
+            const view = { source: cam, render: false }
+            view['scene-name'] = sceneName
+            this.obs.send('SetSceneItemRender', view)
+              .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${sceneName}': ${err.error}`) })
+              .then(() => {
+                this.scenes[sceneName].changedCams.delete(cam)
+              })
           }
         })
-      }
-
-      // Anything left needs to be hidden
-      this.scenes[sceneName].changed.forEach(cam => {
-        if (!this.scenes[sceneName].cams.includes(cam)) {
-          const view = { source: cam, render: false }
-          view['scene-name'] = sceneName
-          this.obs.send('SetSceneItemRender', view)
-            .then(() => this.scenes[sceneName].changed.delete(cam))
-            .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${sceneName}': ${err.error}`) })
-        }
       })
-
-      if (this.scenes[sceneName].changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again later
-        setTimeout(() => this.updateOBS(this.currentScene), parseInt(process.env.OBS_RETRY_DELAY) || 5000)
-      }
+      .catch(e => { this.logger.error(`Error updating obs scene windows: ${JSON.stringify(e)}`)})
 
       this.storedWindows = windows
     }
