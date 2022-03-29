@@ -119,10 +119,12 @@ class AdminStore {
   await import(process.env.APP_CONFIG)
     .then(config => {
       if (config && config.default) {
-        logger.debug(`Loaded app config: ${JSON.stringify(config, null, 2)}`)
-        app.config = config.default
+        logger.debug(`Loaded app config: ${JSON.stringify(config)}`)
+        app.config = JSON.parse(JSON.stringify(config.default)) // deep copy
+
+        // Set defaults if they don't exist
         if (!app.config.windows) app.config.windows = {}
-        if (!app.config.windows.sourceTypes) app.config.windows.sourceTypes = ['dshow_input', 'ffmpeg_source']
+        if (!app.config.windows.sourceKinds) app.config.windows.sourceKinds = ['dshow_input', 'ffmpeg_source']
       }
     })
     .catch(e => logger.warn(`Unable to load config ${process.env.APP_CONFIG}: ${e}`))
@@ -159,7 +161,7 @@ class AdminStore {
   const obsView = new OBSView({
     obs: obs,
     db: db,
-    windowTypes: app.config.windows.sourceTypes,
+    windowKinds: app.config.windows.sourceKinds,
     logger: logger
   })
 
@@ -308,7 +310,7 @@ class AdminStore {
       switch (match) {
         // ANYONE COMMANDS
         case '!cams': {
-          const sources = obsView.getSources(app.config.windows.sourceTypes).map(s => app.ptz.names.includes(s) ? `${s.replace(/\W/g, '-')} (ptz)` : s.replace(/\W/g, '-'))
+          const sources = obsView.getSources(app.config.windows.sourceKinds).map(s => app.ptz.names.includes(s) ? `${s.replace(/\W/g, '-')} (ptz)` : s.replace(/\W/g, '-'))
           // Put PTZ cams first, then sort alphabetically
           sources.sort((a, b) => {
             if (a.includes('ptz') && !b.includes('ptz')) return -1

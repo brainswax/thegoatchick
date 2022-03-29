@@ -4,7 +4,7 @@ export default class OBSView {
   constructor (options) {
     this.obs = options.obs
     this.logger = options.logger || console
-    this.windowTypes = options.windowTypes || ['dshow_input', 'ffmpeg_source']
+    this.windowKinds = options.windowKinds || ['dshow_input', 'ffmpeg_source']
 
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenes = {}
@@ -78,22 +78,22 @@ export default class OBSView {
 
   commandWindows (chat, channel, message) {
     this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
-    this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowTypes), null, 2)}`)
+    this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowKinds), null, 2)}`)
     this.logger.debug(`Windows: ${JSON.stringify(this.scenes[this.currentScene].windows, null, 2)}`)
     chat.say(channel, `There are ${this.scenes[this.currentScene].windows.length} windows.`)
   }
 
   /**
-   * Gets an array of OBS sources by type
-   * @param types the OBS source type
+   * Gets an array of OBS sources by kind
+   * @param kinds the OBS source kind
    * @returns array of source names
   */
-  getSources (types) {
+  getSources (kinds) {
     const sources = []
 
     if (this.currentScene && this.scenes[this.currentScene]) {
       Object.values(this.scenes[this.currentScene].sources).forEach(source => {
-        if (!types || types.includes(source.type)) { // If types is null, assume any type
+        if (!kinds || kinds.includes(source.kind)) { // If kinds is null, assume any kind
           sources.push(source.name.toLowerCase())
         }
       })
@@ -164,7 +164,7 @@ export default class OBSView {
   processChat (msg) {
     if (this.currentScene && this.scenes[this.currentScene]) {
       this.parseChatCommands(msg).forEach(c => { this.setWindow(c.index, c.name) })
-      this.updateOBS()
+      this.updateOBS(this.currentScene)
     } else {
       this.logger.warn('Chat command cannot be processed because OBS has not been loaded yet')
     }
@@ -283,16 +283,16 @@ export default class OBSView {
   }
 
   /**
-   * Find a source from any of the scenes and return the type if there is one.
+   * Find a source from any of the scenes and return the kind if there is one.
    *
-   * OBS doesn't provide the type/sourceKind on a changed item and sources have unique names across scenes, so look for one rather than query OBS for it.
+   * OBS doesn't provide the sourceKind on a changed item and sources have unique names across scenes, so look for one rather than query OBS for it.
    * @param {string} sourceName
    * @returns
    */
-  getTypeFromSource (sourceName) {
+  getKindFromSource (sourceName) {
     for (const k of Object.keys(this.scenes)) {
-      if (this.scenes[k].sources[sourceName] && this.scenes[k].sources[sourceName].type) {
-        return this.scenes[k].sources[sourceName].type
+      if (this.scenes[k].sources[sourceName] && this.scenes[k].sources[sourceName].kind) {
+        return this.scenes[k].sources[sourceName].kind
       }
     }
   }
@@ -403,9 +403,9 @@ export default class OBSView {
         return this.obs.send('GetSceneItemProperties', sceneItem)
           .then(s => {
             this.scenes[scene.name].sources[source.name] = s
-            this.scenes[scene.name].sources[source.name].type = source.type
+            this.scenes[scene.name].sources[source.name].kind = source.type // OBS mislabelled the 'kind' field as 'type'
 
-            if (s.visible && this.windowTypes.includes(s.type)) { // Only visible media sources are treated as windows
+            if (s.visible && this.windowKinds.includes(s.kind)) { // Only visible media sources are treated as windows
               this.scenes[scene.name].windows.push({
                 source: s.name,
                 position: s.position,
@@ -442,14 +442,14 @@ export default class OBSView {
     }))
   }
 
-  async addSourceItem (sourceName, type, sceneName) {
+  async addSourceItem (sourceName, kind, sceneName) {
     const sceneItem = { item: sourceName }
     sceneItem['scene-name'] = sceneName
 
     return this.obs.send('GetSceneItemProperties', sceneItem) // Get the source info from obs
       .then(source => { // Add the source to the scene
         this.scenes[sceneName].sources[source.name] = source
-        this.scenes[sceneName].sources[source.name].type = type
+        this.scenes[sceneName].sources[source.name].kind = kind
       })
       .then(() => { // Add an alias for the new source
         this.scenes[sceneName].aliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceName
@@ -460,7 +460,7 @@ export default class OBSView {
   updateSourceItem (sceneName, source) {
     // Update the source object
     if (sceneName in this.scenes) {
-      if (this.scenes[sceneName].sources[source.name] && !source.type) source.type = this.scenes[sceneName].sources[source.name].type // The type may not be in the message, but we want to keep it
+      if (this.scenes[sceneName].sources[source.name] && !source.kind) source.kind = this.scenes[sceneName].sources[source.name].kind // The kind may not be in the message, but we want to keep it
       this.scenes[sceneName].sources[source.name] = source
 
       // Make sure there's an alias
@@ -492,8 +492,8 @@ export default class OBSView {
 
     if (this.scenes[data['scene-name']] &&
         (!this.scenes[data['scene-name']].sources[data['item-name']] ||
-        !this.scenes[data['scene-name']].sources[data['item-name']].type)) { // This source already exists in at least one other scene
-      source.type = this.getTypeFromSource(data['item-name']) // Grab the type from it so we don't have to query OBS
+        !this.scenes[data['scene-name']].sources[data['item-name']].kind)) { // This source already exists in at least one other scene
+      source.kind = this.getKindFromSource(data['item-name']) // Grab the kind from it so we don't have to query OBS
     }
 
     this.updateSourceItem(data['scene-name'], source)
@@ -605,7 +605,7 @@ export default class OBSView {
   /**
   Update OBS with only the cameras that have changed
   */
-  updateOBS (scene = this.currentScene) {
+  updateOBS (scene) {
     if (scene) {
       const windows = this.updateWindows(scene)
 
@@ -640,7 +640,7 @@ export default class OBSView {
       })
 
       if (this.scenes[scene].changed.size > 0 & process.env.OBS_RETRY !== 'false') { // Something didn't update, let's try again later
-        setTimeout(() => this.updateOBS(), parseInt(process.env.OBS_RETRY_DELAY) || 5000)
+        setTimeout(() => this.updateOBS(this.currentScene), parseInt(process.env.OBS_RETRY_DELAY) || 5000)
       }
 
       this.storedWindows = windows

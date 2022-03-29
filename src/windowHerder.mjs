@@ -20,7 +20,7 @@ export default class WindowHerder extends Herder {
 
     if (this.changed) {
       this.changed = false
-      this.obsView.updateOBS()
+      this.obsView.updateOBS(this.obsView.currentScene)
     }
   }
 
