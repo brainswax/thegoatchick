@@ -253,21 +253,22 @@ export default class OBSView {
    * @param {string} scene the name of the scene
    * @returns the source objevt returned from OBS
    */
-  getSourceByAlias (source, scene = this.currentScene) {
-    if (this.scenes[scene]) {
-      const sourceName = this.scenes[scene].aliases[source]
+  getSourceByAlias (source, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName]) {
+      const sourceName = this.scenes[sceneName].aliases[source]
       if (sourceName) {
-        return this.scenes[scene].sources[sourceName]
+        return this.scenes[sceneName].sources[sourceName]
       }
     }
   }
 
   getAliases (scene) {
-    return this.scenes[scene ? scene : this.currentScene].aliases
+    return this.scenes[scene || this.currentScene].aliases
   }
 
   getWindows (scene) {
-    return this.scenes[scene ? scene : this.currentScene].windows
+    return this.scenes[scene || this.currentScene].windows
   }
 
   /**
@@ -354,58 +355,66 @@ export default class OBSView {
     }
   }
 
-  getWindowX (index, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].position.x
+  getWindowX (index, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].position.x
   }
 
-  setWindowX (index, value, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) {
-      const old = this.scenes[scene].windows[index].position.x
+  setWindowX (index, value, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) {
+      const old = this.scenes[sceneName].windows[index].position.x
       if (value !== old) {
-        this.scenes[scene].changedWindows.add(index)
-        this.scenes[scene].windows[index].position.x = value
+        this.scenes[sceneName].changedWindows.add(index)
+        this.scenes[sceneName].windows[index].position.x = value
       }
     }
   }
 
-  getWindowY (index, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].position.y
+  getWindowY (index, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].position.y
   }
 
-  setWindowY (index, value, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) {
-      const old = this.scenes[scene].windows[index].position.y
+  setWindowY (index, value, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) {
+      const old = this.scenes[sceneName].windows[index].position.y
       if (value !== old) {
-        this.scenes[scene].changedWindows.add(index)
-        this.scenes[scene].windows[index].position.y = value
+        this.scenes[sceneName].changedWindows.add(index)
+        this.scenes[sceneName].windows[index].position.y = value
       }
     }
   }
 
-  getWindowWidth (index, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].width
+  getWindowWidth (index, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].width
   }
 
-  setWindowWidth (index, value, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) {
-      const old = this.scenes[scene].windows[index].width
+  setWindowWidth (index, value, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) {
+      const old = this.scenes[sceneName].windows[index].width
       if (value !== old) {
-        this.scenes[scene].changedWindows.add(index)
-        this.scenes[scene].windows[index].width = value
+        this.scenes[sceneName].changedWindows.add(index)
+        this.scenes[sceneName].windows[index].width = value
       }
     }
   }
 
-  getWindowHeight (index, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) return this.scenes[scene].windows[index].height
+  getWindowHeight (index, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].height
   }
 
-  setWindowHeight (index, value, scene = this.currentScene) {
-    if (this.scenes[scene].windows.length > index) {
-      const old = this.scenes[scene].windows[index].height
+  setWindowHeight (index, value, scene) {
+    const sceneName = scene || this.currentScene
+    if (this.scenes[sceneName].windows.length > index) {
+      const old = this.scenes[sceneName].windows[index].height
       if (value !== old) {
-        this.scenes[scene].changedWindows.add(index)
-        this.scenes[scene].windows[index].height = value
+        this.scenes[sceneName].changedWindows.add(index)
+        this.scenes[sceneName].windows[index].height = value
       }
     }
   }
@@ -695,21 +704,21 @@ export default class OBSView {
             })
         }
       }))
-      .then(() => {
+        .then(() => {
         // Anything left needs to be hidden
-        this.scenes[sceneName].changedCams.forEach(cam => {
-          if (!this.scenes[sceneName].cams.includes(cam)) {
-            const view = { source: cam, render: false }
-            view['scene-name'] = sceneName
-            this.obs.send('SetSceneItemRender', view)
-              .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${sceneName}': ${err.error}`) })
-              .then(() => {
-                this.scenes[sceneName].changedCams.delete(cam)
-              })
-          }
+          this.scenes[sceneName].changedCams.forEach(cam => {
+            if (!this.scenes[sceneName].cams.includes(cam)) {
+              const view = { source: cam, render: false }
+              view['scene-name'] = sceneName
+              this.obs.send('SetSceneItemRender', view)
+                .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${sceneName}': ${err.error}`) })
+                .then(() => {
+                  this.scenes[sceneName].changedCams.delete(cam)
+                })
+            }
+          })
         })
-      })
-      .catch(e => { this.logger.error(`Error updating obs scene windows: ${JSON.stringify(e)}`)})
+        .catch(e => { this.logger.error(`Error updating obs scene windows: ${JSON.stringify(e)}`) })
 
       this.storedWindows = windows
     }
