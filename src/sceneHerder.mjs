@@ -14,7 +14,7 @@ export default class SceneHerder extends Herder {
   }
 
   showScenes (name, cmd) {
-    if (!cmd || cmd.length === 0) this.twitch.chat.say(this.twitch.channel, `scenes: ${this.obsView.getSceneNames().join(', ')}`)
+    if (!cmd || cmd.length === 0) this.twitch.chat.say(this.twitch.channel, `scenes: ${this.obsView.getSceneAliases().join(', ')}`)
     else {
       this.obsView.setCurrentScene(cmd)
     }

@@ -18,15 +18,15 @@ function sortWindows (a, b) {
 }
 
 function getSceneAliases (scenes) {
-  const sceneAliases = {}
+  const sceneAliases = {} // Needs to be an Object, not Map, in order to persist it in the object store
   for (const sceneName in scenes) sceneAliases[sceneName.toLowerCase().replace(/\W/g, '-')] = sceneName
   return sceneAliases
 }
 
 function getSourceAliases (sources) {
-  const aliases = {}
-  for (const sourceName in sources) aliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceName
-  return aliases
+  const sourceAliases = {} // Needs to be an Object, not Map, in order to persist it in the object store
+  for (const sourceName in sources) sourceAliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceName
+  return sourceAliases
 }
 
 function getSceneCams (windows) {
@@ -120,7 +120,7 @@ class ScenesRenderer {
     return this.getSceneSources(sceneData)
       .then(sources => {
         scene.sources = sources
-        scene.aliases = getSourceAliases(sources)
+        scene.sourceAliases = getSourceAliases(sources)
       })
       .then(() => scene)
   }
@@ -153,7 +153,7 @@ export default class OBSView {
     this.db = options.db || new Stojo({ logger: this.logger })
     this.scenesRenderer = new ScenesRenderer({ obs: this.obs, logger: this.logger })
     this.scenes = {}
-    this.sceneAliases = new Map()
+    this.sceneAliases = {}
     this.currentScene = ''
 
     this.commands = new Map()
@@ -253,10 +253,9 @@ export default class OBSView {
    * @param {string} scene the name of the scene
    * @returns the source objevt returned from OBS
    */
-  getSourceByAlias (source, scene) {
-    const sceneName = scene || this.currentScene
+  getSourceByAlias (sourceAlias, sceneName) {
     if (this.scenes[sceneName]) {
-      const sourceName = this.scenes[sceneName].aliases[source]
+      const sourceName = this.scenes[sceneName].sourceAliases[sourceAlias]
       if (sourceName) {
         return this.scenes[sceneName].sources[sourceName]
       }
@@ -264,7 +263,7 @@ export default class OBSView {
   }
 
   getAliases (scene) {
-    return this.scenes[scene || this.currentScene].aliases
+    return Object.keys(this.scenes[scene || this.currentScene].sourceAliases)
   }
 
   getWindows (scene) {
@@ -291,10 +290,10 @@ export default class OBSView {
       words.forEach(word => {
         const i = word.search(/\D/) // Find the first non-digit character
         const camName = word.slice(i) // get everything including and after the first non-digit character
-        if (camName in this.scenes[this.currentScene].aliases) { // Only add a commmand if there are aliases for the camera name
+        if (camName in this.scenes[this.currentScene].sourceAliases) { // Only add a commmand if there are aliases for the camera name
           const camIndex = i === 0 ? 0 : parseInt(word.slice(0, i)) // Assume 0 unless it starts with a number
           if (camIndex < this.scenes[this.currentScene].cams.length) { // Only add it if there's a camera window available
-            commands[n++] = { index: camIndex, name: this.scenes[this.currentScene].aliases[camName] } // Add the command to the array
+            commands[n++] = { index: camIndex, name: this.scenes[this.currentScene].sourceAliases[camName] } // Add the command to the array
           }
         }
       })
@@ -419,22 +418,37 @@ export default class OBSView {
     }
   }
 
-  hasSourceAlias (sourceName, sceneName) {
+  addSourceAlias (sourceAlias, sourceName, sceneName) {
     if (this.scenes[sceneName]) {
-      for (const alias in this.scenes[sceneName].aliases) {
-        if (this.scenes[sceneName].aliases[alias] === sourceName) return true
-      }
+      this.scenes[sceneName].sourceAliases[sourceAlias.toLowerCase().replace(/\W/g, '-')] = sourceName
     }
-    return false
   }
 
   removeAliasesForSource (sourceName, sceneName) {
     if (this.scenes[sceneName]) {
-      Object.keys(this.scenes[sceneName].aliases).forEach(k => {
-        if (this.scenes[sceneName].aliases[k] === sourceName) {
-          delete this.scenes[sceneName].aliases[k]
-        }
-      })
+      for (const key in this.scenes[sceneName].sourceAliases) {
+        if (this.scenes[sceneName].sourceAliases[key] === sourceName) delete this.scenes[sceneName].sourceAliases[key]
+      }
+    }
+  }
+
+  addSceneAlias (sceneAlias, sceneName) {
+    if (sceneName && sceneName.length > 0 && sceneAlias && sceneAlias.length > 0) {
+      this.sceneAliases[sceneAlias.toLowerCase().replace(/\W/g, '-')] = sceneName
+    }
+  }
+
+  removeAliasesForScene (sceneName) {
+    if (sceneName) {
+      for (const key in this.sceneAliases) if (this.sceneAliases[key] === sceneName) delete this.sceneAliases[key]
+    }
+  }
+
+  renameCams (oldName, newName, sceneName) {
+    if (sceneName && sceneName in this.scenes) {
+      for (let i = 0; i < this.scenes[sceneName].cams.length; i++) {
+        if (this.scenes[sceneName].cams[i] === oldName) this.scenes[sceneName].cams[i] = newName
+      }
     }
   }
 
@@ -473,32 +487,28 @@ export default class OBSView {
       delete this.scenes[sceneName].sources[oldName]
 
       // Remove old aliases
-      Object.keys(this.scenes[sceneName].aliases).forEach(k => {
-        if (this.scenes[sceneName].aliases[k] === oldName) {
-          delete this.scenes[sceneName].aliases[k]
-        }
-      })
+      this.removeAliasesForSource(oldName, sceneName)
 
       // Add new aliases
-      this.scenes[sceneName].aliases[newName.toLowerCase().replace(/\W/g, '-')] = newName
+      this.addSourceAlias(newName, newName, sceneName)
 
       // Update cams
-      for (let i = 0; i < this.scenes[sceneName].cams.length; i++) {
-        if (this.scenes[sceneName].cams[i] === oldName) this.scenes[sceneName].cams[i] = newName
-      }
+      this.renameCams(oldName, newName, sceneName)
+
       this.logger.info(`Renamed source '${oldName}' to '${newName}' in scene '${sceneName}'`)
     }
   }
 
-  getSceneNames () {
-    return Array.from(this.sceneAliases.keys())
+  getSceneAliases () {
+    return Object.keys(this.sceneAliases)
   }
 
-  setCurrentScene (scene) {
-    if (this.sceneAliases.has(scene)) {
+  setCurrentScene (sceneAlias) {
+    const sceneName = this.sceneAliases[sceneAlias]
+    if (sceneName) {
       const s = {}
-      s['scene-name'] = this.sceneAliases.get(scene)
-      this.obs.send('SetCurrentScene', s)
+      s['scene-name'] = sceneName
+      return this.obs.send('SetCurrentScene', s)
         .catch(e => { this.logger.error(`OBS error switching scenes: ${JSON.stringify(e, null, 2)}`) })
     }
   }
@@ -506,12 +516,8 @@ export default class OBSView {
   renameScene (oldName, newName) {
     if (oldName in this.scenes) {
       // replace aliases
-      for (const [k, v] of this.sceneAliases.entries()) {
-        if (oldName === v) {
-          this.sceneAliases.delete(k)
-        }
-      }
-      this.sceneAliases.set(newName.toLowerCase().replace(/\W/g, '-'), newName)
+      this.removeAliasesForScene(oldName)
+      this.addSceneAlias(newName, newName)
 
       // replace scenes
       this.scenes[newName] = this.scenes[oldName]
@@ -525,11 +531,7 @@ export default class OBSView {
 
   deleteScene (sceneName) {
     if (sceneName in this.scenes) delete this.scenes[sceneName]
-    for (const [k, v] of this.sceneAliases.entries()) {
-      if (sceneName === v) {
-        this.sceneAliases.delete(k)
-      }
-    }
+    this.removeAliasesForScene(sceneName)
     this.logger.info(`Deleted scene '${sceneName}'`)
   }
 
@@ -543,7 +545,7 @@ export default class OBSView {
         this.scenes[sceneName].sources[source.name].kind = kind
       })
       .then(() => { // Add an alias for the new source
-        this.scenes[sceneName].aliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceName
+        this.addSceneAlias(sourceName, sourceName)
       })
       .then(() => this.logger.info(`Added source '${sourceName}' for scene '${sceneName}'`))
   }
@@ -555,9 +557,7 @@ export default class OBSView {
       this.scenes[sceneName].sources[source.name] = source
 
       // Make sure there's an alias
-      if (!this.hasSourceAlias(source.name, sceneName)) {
-        this.scenes[sceneName].aliases[source.name.toLowerCase().replace(/\W/g, '-')] = source.name
-      }
+      this.addSourceAlias(source.name, source.name, sceneName)
 
       this.logger.info(`Updated source '${source.name}' in scene '${sceneName}'`)
       this.logger.debug(`Updated source '${source.name}' in scene '${sceneName}': ${JSON.stringify(source, null, 2)}`)
@@ -651,6 +651,7 @@ export default class OBSView {
       .then(scenes => {
         this.scenes = scenes
         this.sceneAliases = getSceneAliases(scenes)
+
         this.logger.info(`OBS scenes changed: '${Object.keys(this.scenes).join('\', \'')}'`)
       })
       .catch(e => { this.logger.error(`Error updated scene change: ${JSON.stringify(e)}`) })
