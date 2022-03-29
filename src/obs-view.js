@@ -263,19 +263,49 @@ export default class OBSView {
     }
   }
 
-  deleteSource (sourceName, sceneName) {
-    // Remove from the scenes sources
-    if (sourceName in this.scenes[sceneName].sources) {
-      delete this.scenes[sceneName].sources[sourceName]
+  hasSourceAlias (sourceName, sceneName) {
+    if (this.scenes[sceneName]) {
+      for (const alias in this.scenes[sceneName].aliases) {
+        if (this.scenes[sceneName].aliases[alias] === sourceName) return true
+      }
+    }
+    return false
+  }
 
-      // Remove from aliases
+  removeAliasesForSource (sourceName, sceneName) {
+    if (this.scenes[sceneName]) {
       Object.keys(this.scenes[sceneName].aliases).forEach(k => {
         if (this.scenes[sceneName].aliases[k] === sourceName) {
           delete this.scenes[sceneName].aliases[k]
         }
       })
+    }
+  }
 
-      this.logger.info(`Deleted source '${sourceName}' from scene '${sceneName}'`)
+  /**
+   * Find a source from any of the scenes and return the type if there is one.
+   *
+   * OBS doesn't provide the type/sourceKind on a changed item and sources have unique names across scenes, so look for one rather than query OBS for it.
+   * @param {string} sourceName
+   * @returns
+   */
+  getTypeFromSource (sourceName) {
+    for (const k of Object.keys(this.scenes)) {
+      if (this.scenes[k].sources[sourceName] && this.scenes[k].sources[sourceName].type) {
+        return this.scenes[k].sources[sourceName].type
+      }
+    }
+  }
+
+  removeSource (sourceName, sceneName) {
+    if (this.scenes[sceneName] && sourceName in this.scenes[sceneName].sources) {
+      // Remove from aliases
+      this.removeAliasesForSource(sourceName, sceneName)
+
+      // Remove from the scenes sources
+      delete this.scenes[sceneName].sources[sourceName]
+
+      this.logger.info(`Removed source '${sourceName}' from scene '${sceneName}'`)
     }
   }
 
@@ -427,48 +457,95 @@ export default class OBSView {
       .then(() => this.logger.info(`Added source '${sourceName}' for scene '${sceneName}'`))
   }
 
+  updateSourceItem (sceneName, source) {
+    // Update the source object
+    if (sceneName in this.scenes) {
+      if (this.scenes[sceneName].sources[source.name] && !source.type) source.type = this.scenes[sceneName].sources[source.name].type // The type may not be in the message, but we want to keep it
+      this.scenes[sceneName].sources[source.name] = source
+
+      // Make sure there's an alias
+      if (!this.hasSourceAlias(source.name, sceneName)) {
+        this.scenes[sceneName].aliases[source.name.toLowerCase().replace(/\W/g, '-')] = source.name
+      }
+
+      this.logger.info(`Updated source '${source.name}' in scene '${sceneName}'`)
+      this.logger.debug(`Updated source '${source.name}' in scene '${sceneName}': ${JSON.stringify(source, null, 2)}`)
+    } else this.logger.info(`Source not updated. Scene '${sceneName}' doesn't exist`)
+  }
+
   // Handlers for OBS events //////////////////////////////////////////////////
   sourceOrderChanged (data) {
-    this.logger.debug(`sourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
+    this.logger.info(`Source order changed for scene '${data.sceneName}'`)
+    this.logger.debug(`Event OBS:SourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
   }
 
   sceneItemVisibilityChanged (data) {
-    this.logger.debug(`sceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
+    // TODO: show/hide sources
+    this.logger.info(`${data.itemVisible ? 'Show' : 'Hide'} source '${data.itemName}' in scene '${data.sceneName}'`)
+    this.logger.debug(`Event OBS:SceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
   }
 
   sceneItemTransformChanged (data) {
-    this.logger.debug(`sceneItemTransformChanged: ${JSON.stringify(data, null, 2)}`)
+    // Update an existing source item
+    const source = data.transform
+    source.name = data['item-name']
+
+    if (this.scenes[data['scene-name']] &&
+        (!this.scenes[data['scene-name']].sources[data['item-name']] ||
+        !this.scenes[data['scene-name']].sources[data['item-name']].type)) { // This source already exists in at least one other scene
+      source.type = this.getTypeFromSource(data['item-name']) // Grab the type from it so we don't have to query OBS
+    }
+
+    this.updateSourceItem(data['scene-name'], source)
   }
 
   switchScenes (data) {
     if (this.currentScene !== data.sceneName) {
-      this.logger.info(`OBS switched scene from '${this.currentScene}' to '${data.sceneName}'`)
+      this.logger.info(`Switched scene from '${this.currentScene}' to '${data.sceneName}'`)
       this.currentScene = data.sceneName
     }
   }
 
   sourceRenamed (data) {
-    if (data.sourceType === 'scene') {
-      this.renameScene(data.previousName, data.newName)
-    } else if (data.sourceType === 'input') {
-      this.renameSource(data.previousName, data.newName, this.currentScene)
-    } else {
-      this.logger.info(`Renamed source '${JSON.stringify(data, null, 2)}'`)
+    const sceneName = data.sceneName ? data.sceneName : this.currentScene
+    switch (data.sourceType) {
+      case 'scene':
+        this.renameScene(data.previousName, data.newName)
+        break
+      case 'input':
+        this.renameSource(data.previousName, data.newName, sceneName)
+        break
+      case 'group':
+        this.logger.info(`Renamed group '${data.sourceName}' in scene '${sceneName}'`)
+        break
+      default: // Shouldn't get here. Warn.
+        this.logger.warn(`Renamed source '${data.sourceName}' of unknown type '${data.sourceType}' in scene '${sceneName}'`)
     }
   }
 
   sourceDestroyed (data) {
-    if (data.sourceType === 'scene') {
-      this.deleteScene(data.sourceName)
-    } else if (data.sourceType === 'input') {
-      this.deleteSource(data.sourceName, this.currentScene)
-    } else {
-      this.logger.info(`Deleted source '${JSON.stringify(data, null, 2)}'`)
+    // Destroyed should be removed from all scenes
+    switch (data.sourceType) {
+      case 'scene':
+        this.deleteScene(data.sourceName)
+        break
+      case 'input':
+        this.logger.info(`Removed source '${data.sourceName}' from all scenes`)
+        break
+      case 'group':
+        this.logger.info(`Removed group '${data.sourceName}' from all scenes`)
+        break
+      default: // Shouldn't get here. Warn.
+        this.logger.warn(`Removed source '${data.sourceName}' of unknown type '${data.sourceType}' from all scenes`)
     }
   }
 
+  sourceItemRemoved (data) {
+    this.removeSource(data['item-name'], data['scene-name'])
+  }
+
   sourceCreated (data) {
-    if (data.sourceType === 'scene') { // Only log; OBS will trigger a ScenesChanged event
+    if (data.sourceType === 'scene') { // Only log; OBS will trigger a ScenesChanged event with the data
       this.logger.info(`Created scene '${data.sourceName}'`)
     } else if (data.sourceType === 'input') {
       this.addSourceItem(data.sourceName, data.sourceKind, this.currentScene)
@@ -478,6 +555,7 @@ export default class OBSView {
 
   scenesChanged (data) {
     this.logger.info('Updating scenes')
+    this.logger.debug(`Updating scenes: ${JSON.stringify(data, null, 2)}`)
     this.updateScenes(data.scenes)
   }
   /// //////////////////////////////////////////////////////////////////////////

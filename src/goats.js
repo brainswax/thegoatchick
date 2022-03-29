@@ -205,6 +205,7 @@ class AdminStore {
   obs.on('SourceCreated', data => obsView.sourceCreated(data))
   obs.on('ScenesChanged', data => obsView.scenesChanged(data))
   obs.on('SourceDestroyed', data => obsView.sourceDestroyed(data))
+  obs.on('SceneItemRemoved', data => obsView.sourceItemRemoved(data))
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
