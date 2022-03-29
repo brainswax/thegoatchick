@@ -7,7 +7,8 @@ import { Stojo } from '@codegrill/stojo'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 import crypto from 'crypto'
-import WindowHandler from './windowHandler.mjs'
+import WindowHerder from './windowHerder.mjs'
+import SceneHerder from './sceneHerder.mjs'
 
 cenv.env(process.env.NODE_ENV)
 
@@ -118,10 +119,12 @@ class AdminStore {
   await import(process.env.APP_CONFIG)
     .then(config => {
       if (config && config.default) {
-        logger.debug(`Loaded app config: ${JSON.stringify(config, null, 2)}`)
-        app.config = config.default
+        logger.debug(`Loaded app config: ${JSON.stringify(config)}`)
+        app.config = JSON.parse(JSON.stringify(config.default)) // deep copy
+
+        // Set defaults if they don't exist
         if (!app.config.windows) app.config.windows = {}
-        if (!app.config.windows.sourceTypes) app.config.windows.sourceTypes = ['dshow_input', 'ffmpeg_source']
+        if (!app.config.windows.sourceKinds) app.config.windows.sourceKinds = ['dshow_input', 'ffmpeg_source']
       }
     })
     .catch(e => logger.warn(`Unable to load config ${process.env.APP_CONFIG}: ${e}`))
@@ -158,7 +161,7 @@ class AdminStore {
   const obsView = new OBSView({
     obs: obs,
     db: db,
-    windowTypes: app.config.windows.sourceTypes,
+    windowKinds: app.config.windows.sourceKinds,
     logger: logger
   })
 
@@ -196,6 +199,15 @@ class AdminStore {
   })
   obs.on('AuthenticationSuccess', () => { logger.info('== OBS successfully authenticated') })
   obs.on('AuthenticationFailure', () => { logger.info('== OBS failed authentication') })
+  obs.on('SceneItemVisibilityChanged', data => obsView.sceneItemVisibilityChanged(data))
+  obs.on('SourceOrderChanged', data => obsView.sourceOrderChanged(data))
+  obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
+  obs.on('SwitchScenes', data => obsView.switchScenes(data))
+  obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
+  obs.on('SourceCreated', data => obsView.sourceCreated(data))
+  obs.on('ScenesChanged', data => obsView.scenesChanged(data))
+  obs.on('SourceDestroyed', data => obsView.sourceDestroyed(data))
+  obs.on('SceneItemRemoved', data => obsView.sourceItemRemoved(data))
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
@@ -264,15 +276,18 @@ class AdminStore {
   }
 
   // This will process !camN commands to view and manage windows for cams/views
-  app.windowHandler = new WindowHandler({
-    logger: logger,
-    twitch: {
-      chat: chat,
-      channel: process.env.TWITCH_CHANNEL
-    },
-    obsView: obsView
-  })
-
+  {
+    const options = {
+      logger: logger,
+      twitch: {
+        chat: chat,
+        channel: process.env.TWITCH_CHANNEL
+      },
+      obsView: obsView
+    }
+    app.windowHerder = new WindowHerder(options)
+    app.sceneHerder = new SceneHerder(options)
+  }
   function sayForSubs () {
     chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for Subscribers')
   }
@@ -295,7 +310,7 @@ class AdminStore {
       switch (match) {
         // ANYONE COMMANDS
         case '!cams': {
-          const sources = obsView.getSources(app.config.windows.sourceTypes).map(s => app.ptz.names.includes(s) ? `${s.replace(/\W+/, '-')} (ptz)` : s.replace(/\W+/, '-'))
+          const sources = obsView.getSources(app.config.windows.sourceKinds).map(s => app.ptz.names.includes(s) ? `${s.replace(/\W/g, '-')} (ptz)` : s.replace(/\W/g, '-'))
           // Put PTZ cams first, then sort alphabetically
           sources.sort((a, b) => {
             if (a.includes('ptz') && !b.includes('ptz')) return -1
@@ -328,6 +343,14 @@ class AdminStore {
           // Automatically show the 'does' camera at the 'bell' shortcut if it's not already shown
           if (!obsView.inView('does')) obsView.processChat('2does')
           if (app.ptz.cams.has('does')) app.ptz.cams.get('does').moveToShortcut('bell')
+          break
+        case '!scene':
+        case '!scenes':
+          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
+            sayForSubs()
+            break
+          }
+          app.sceneHerder.herd(match, str)
           break
 
         // MOD COMMANDS
@@ -472,7 +495,7 @@ class AdminStore {
             }
             if (match.startsWith('!cam') && match.length > '!cam'.length) {
               if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
-                app.windowHandler.handleWindow(match, str)
+                app.windowHerder.herd(match, str)
               } else sayForMods()
             }
           }
