@@ -78,7 +78,7 @@ function getWindows (scene) {
   return windows
 }
 
-class ScenesUpdater {
+class ScenesRenderer {
   constructor (options) {
     this.obs = options.obs
     this.logger = options.logger
@@ -151,7 +151,7 @@ export default class OBSView {
     this.windowKinds = options.windowKinds || ['dshow_input', 'ffmpeg_source']
 
     this.db = options.db || new Stojo({ logger: this.logger })
-    this.scenesUpdater = new ScenesUpdater({ obs: this.obs, logger: this.logger })
+    this.scenesRenderer = new ScenesRenderer({ obs: this.obs, logger: this.logger })
     this.scenes = {}
     this.sceneAliases = new Map()
     this.currentScene = ''
@@ -647,7 +647,7 @@ export default class OBSView {
   async scenesChanged (data) {
     this.logger.info('Updating scenes')
     this.logger.debug(`Updating scenes: ${JSON.stringify(data, null, 2)}`)
-    return this.scenesUpdater.getScenes(data.scenes, this.windowKinds)
+    return this.scenesRenderer.getScenes(data.scenes, this.windowKinds)
       .then(scenes => {
         this.scenes = scenes
         this.sceneAliases = getSceneAliases(scenes)
@@ -666,7 +666,7 @@ export default class OBSView {
       .then(async data => {
         this.currentScene = data['current-scene']
         this.logger.info(`Current OBS scene: '${this.currentScene}'`)
-        return this.scenesUpdater.getScenes(data.scenes, this.windowKinds)
+        return this.scenesRenderer.getScenes(data.scenes, this.windowKinds)
           .then(scenes => {
             this.scenes = scenes
             this.sceneAliases = getSceneAliases(scenes)
