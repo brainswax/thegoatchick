@@ -12,7 +12,7 @@ export default class WindowHerder extends Herder {
     this.commands.set('h', (...args) => this.setHeight(...args))
   }
 
-  handleWindow (cmd, str) {
+  herd (cmd, str) {
     const split = cmd.split(/\D+/) // Grab the index on the end of the command
     if (split.length > 1) {
       this.command(parseInt(split[1]), str)

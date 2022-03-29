@@ -495,7 +495,7 @@ class AdminStore {
             }
             if (match.startsWith('!cam') && match.length > '!cam'.length) {
               if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
-                app.windowHerder.handleWindow(match, str)
+                app.windowHerder.herd(match, str)
               } else sayForMods()
             }
           }
