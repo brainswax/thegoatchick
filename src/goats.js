@@ -177,7 +177,7 @@ class AdminStore {
     logger: logger
   })
 
-  async function connectObs (obs) {
+  async function connectOBS (obs) {
     logger.info(`== connecting to OBS host:${process.env.OBS_ADDRESS}, hash: ${crypto.createHash('sha256').update(process.env.OBS_PASSWORD).digest('base64')}`)
     return obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
       .then(() => {
@@ -193,7 +193,7 @@ class AdminStore {
       const delay = Math.round((process.env.OBS_RETRY_DELAY || 3000) * ((process.env.OBS_RETRY_DECAY || 1.2) ** app.obs.retries++))
       logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
-        connectObs(obs)
+        connectOBS(obs)
           .then(() => obs.send('GetVideoInfo'))
           .then((info) => {
             // Need the info to get the stream resolution
@@ -230,7 +230,7 @@ class AdminStore {
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
-  connectObs(obs)
+  connectOBS(obs)
     .catch(e => logger.error(`Connect OBS failed: ${e.error}`))
 
   // ///////////////////////////////////////////////////////////////////////////
