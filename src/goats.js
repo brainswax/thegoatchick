@@ -289,11 +289,7 @@ class AdminStore {
     app.sceneHerder = new SceneHerder(options)
   }
   function sayForSubs () {
-    chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for Subscribers')
-  }
-
-  function sayForMods () {
-    chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for mods')
+    chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for subscribers')
   }
 
   function chatBot (str, context) {
@@ -496,7 +492,7 @@ class AdminStore {
             if (match.startsWith('!cam') && match.length > '!cam'.length) {
               if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
                 app.windowHerder.herd(match, str)
-              } else sayForMods()
+              }
             }
           }
         }
