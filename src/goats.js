@@ -187,11 +187,7 @@ class AdminStore {
       .then(() => obsView.syncFromObs())
   }
 
-  obs.on('ConnectionOpened', () => {
-    logger.info('== OBS connection opened')
-  })
-  obs.on('ConnectionClosed', () => {
-    logger.info('== OBS connection closed')
+  function reconnectOBS () {
     // If the connection closes, retry after the timeout period
     if (process.env.OBS_RETRY !== 'false' && !app.exited) {
       const delay = Math.round((process.env.OBS_RETRY_DELAY || 3000) * ((process.env.OBS_RETRY_DECAY || 1.2) ** app.obs.retries++))
@@ -208,6 +204,12 @@ class AdminStore {
           .catch(e => logger.error(`Connect OBS retry failed: ${e.error}`))
       }, delay)
     }
+  }
+
+  obs.on('ConnectionOpened', () => { logger.info('== OBS connection opened') })
+  obs.on('ConnectionClosed', () => {
+    logger.info('== OBS connection closed')
+    reconnectOBS()
   })
   obs.on('AuthenticationSuccess', () => { logger.info('== OBS successfully authenticated') })
   obs.on('AuthenticationFailure', () => { logger.info('== OBS failed authentication') })
@@ -220,6 +222,11 @@ class AdminStore {
   obs.on('ScenesChanged', data => obsView.scenesChanged(data))
   obs.on('SourceDestroyed', data => obsView.sourceDestroyed(data))
   obs.on('SceneItemRemoved', data => obsView.sourceItemRemoved(data))
+  obs.on('Exiting', () => {
+    logger.info('== OBS is exiting')
+    obs.disconnect()
+    reconnectOBS() // Start retrying for it to come back up
+  })
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
