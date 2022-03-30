@@ -116,6 +116,18 @@ class AdminStore {
   })
   process.on('exit', (code) => { logger.log(`== exiting with code: ${code}`) })
 
+  function isSubscriber (context) {
+    return context.subscriber || isModerator(context)
+  }
+
+  function isModerator (context) {
+    return context.mod || app.admins.has(context.username.toLowerCase()) || isBroadcaster(context)
+  }
+
+  function isBroadcaster (context) {
+    return context.badges && context.badges.broadcaster
+  }
+
   await import(process.env.APP_CONFIG)
     .then(config => {
       if (config && config.default) {
@@ -144,11 +156,11 @@ class AdminStore {
     db.close()
   })
   const adminStore = new AdminStore({ logger: logger, db: db })
-  const admins = await adminStore.admins // load from store first
+  app.admins = await adminStore.admins // load from store first
 
-  if (admins.size === 0) { // if nothing in the store, load from the app config
-    app.config.admins.forEach(admin => admins.add(admin))
-    adminStore.admins = admins // persist any admins from the config
+  if (app.admins.size === 0) { // if nothing in the store, load from the app config
+    app.config.admins.forEach(admin => app.admins.add(admin))
+    adminStore.admins = app.admins // persist any admins from the config
   }
 
   // ///////////////////////////////////////////////////////////////////////////
@@ -326,14 +338,12 @@ class AdminStore {
         // SUBSCRIBER COMMANDS
         case '!cam':
         case '!camera':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-            sayForSubs()
-            break
-          }
-          obsView.processChat(str)
+          if (isSubscriber(context)) obsView.processChat(str)
+          else sayForSubs()
+
           break
         case '!bell':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster)) return
+          if (!isSubscriber(context)) break
           logger.info(`${context.username} rang the bell`)
 
           // Automatically show the 'does' camera at the 'bell' shortcut if it's not already shown
@@ -342,26 +352,18 @@ class AdminStore {
           break
         case '!scene':
         case '!scenes':
-          if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-            sayForSubs()
-            break
-          }
-          app.sceneHerder.herd(match, str)
+          if (isSubscriber(context)) app.sceneHerder.herd(match, str)
+          else sayForSubs()
           break
-
         // MOD COMMANDS
         case '!windows':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
-            obsView.commandWindows(chat, process.env.TWITCH_CHANNEL, str)
-          }
+          if (isModerator(context)) obsView.commandWindows(chat, process.env.TWITCH_CHANNEL, str)
           break
         case '!sync':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
-            obsView.syncFromObs()
-          }
+          if (isModerator(context)) obsView.syncFromObs()
           break
         case '!log':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             const words = str.trim()
               .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
               .replace(/[a-z][+:-][\s]+/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces after a colon
@@ -376,7 +378,7 @@ class AdminStore {
           }
           break
         case '!admin':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             const words = str.trim().toLowerCase()
               .replace(/[a-z]+[\s]+[\d]+/g, (s) => { return s.replace(/[\s]+/, '') }) // replace something like '1 treat' with '1treat'
               .replace(/[a-z][\s]+[+:-]/g, (s) => { return s.replace(/[\s]+/g, '') }) // remove spaces before a colon
@@ -390,21 +392,21 @@ class AdminStore {
                 switch (command) {
                   case 'add':
                     logger.info(`Adding admin '${value}'`)
-                    admins.add(value)
+                    app.admins.add(value)
                     break
                   case 'delete':
                   case 'remove':
                     logger.info(`Removing admin '${value}'`)
-                    admins.delete(value)
+                    app.admins.delete(value)
                     break
                 }
-                adminStore.admins = admins
+                adminStore.admins = app.admins
               }
             })
           }
           break
         case '!mute':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             obs.send('SetMute', { source: 'Audio', mute: true })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream muted'))
               .catch(e => {
@@ -414,7 +416,7 @@ class AdminStore {
           }
           break
         case '!unmute':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             obs.send('SetMute', { source: 'Audio', mute: false })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream unmuted'))
               .catch(e => {
@@ -424,14 +426,14 @@ class AdminStore {
           }
           break
         case '!restartscript':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             triggerRestart(process.env.RESTART_FILE)
               .then(() => logger.info(`Triggered restart and wrote file '${process.env.RESTART_FILE}'`))
               .catch(e => logger.error(`Unable to write the restart file '${process.env.RESTART_FILE}': ${e}`))
           }
           break
         case '!stop':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             obs.send('StopStreaming')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped'))
               .catch(e => {
@@ -441,7 +443,7 @@ class AdminStore {
           }
           break
         case '!start':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             obs.send('StartStreaming')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream started'))
               .catch(e => {
@@ -451,7 +453,7 @@ class AdminStore {
           }
           break
         case '!restart':
-          if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
+          if (isModerator(context)) {
             obs.send('StopStreaming')
               .then(() => {
                 chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped. Starting in...')
@@ -478,22 +480,14 @@ class AdminStore {
         default: {
           const cam = match.replace(/^[!]+/, '')
           if (app.ptz.cams.has(cam) || cam in obsView.getAliases() || match.startsWith('!cam')) {
-            if (!context.subscriber && !context.mod && !(context.badges && context.badges.broadcaster) && !admins.has(context.username.toLowerCase())) {
-              sayForSubs()
-              return
-            }
-
-            if (app.ptz.cams.has(cam)) {
-              app.ptz.cams.get(cam).command(str)
-            }
-            if (cam in obsView.getAliases()) {
-              obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
-            }
-            if (match.startsWith('!cam') && match.length > '!cam'.length) {
-              if (context.mod || (context.badges && context.badges.broadcaster) || admins.has(context.username.toLowerCase())) {
-                app.windowHerder.herd(match, str)
-              }
-            }
+            if (isSubscriber(context)) {
+              // A command for a PTZ camera
+              if (app.ptz.cams.has(cam)) app.ptz.cams.get(cam).command(str)
+              // A command to modify an OBS source cam
+              if (cam in obsView.getAliases()) obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
+              // A command for a window
+              if (match.startsWith('!cam')) app.windowHerder.herd(match, str)
+            } else sayForSubs()
           }
         }
       }
