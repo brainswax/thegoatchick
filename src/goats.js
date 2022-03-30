@@ -222,11 +222,6 @@ class AdminStore {
   obs.on('ScenesChanged', data => obsView.scenesChanged(data))
   obs.on('SourceDestroyed', data => obsView.sourceDestroyed(data))
   obs.on('SceneItemRemoved', data => obsView.sourceItemRemoved(data))
-  obs.on('Exiting', () => {
-    logger.info('== OBS is exiting')
-    obs.disconnect()
-    reconnectOBS() // Start retrying for it to come back up
-  })
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
