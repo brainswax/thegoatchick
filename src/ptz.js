@@ -217,7 +217,7 @@ export default class PTZ {
 
   saveShortcut (shortcut) {
     if (shortcut && shortcut !== '*') {
-      this.logger.log(`saving shortcut: { camera: '${this.name}', shortcut: ${JSON.stringify(shortcut)}, coords: ${JSON.stringify(this.data.coords)} }`)
+      this.logger.info(`saving shortcut: { camera: '${this.name}', shortcut: ${JSON.stringify(shortcut)}, coords: ${JSON.stringify(this.data.coords)} }`)
       this.data.shortcuts[shortcut] = JSON.parse(JSON.stringify(this.data.coords)) // deep copy
       this.storedShortcuts = this.data.shortcuts
     }
@@ -225,11 +225,11 @@ export default class PTZ {
 
   deleteShortcut (shortcut) {
     if (shortcut === '*') { // delete all shortcuts
-      this.logger.log(`deleting all shortcuts: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts)} }`)
+      this.logger.info(`deleting all shortcuts: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts)} }`)
       this.data.shortcuts = {}
       this.storedShortcuts = this.data.shortcuts
     } else if (shortcut && this.data.shortcuts[shortcut]) {
-      this.logger.log(`deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
+      this.logger.info(`deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
       delete this.data.shortcuts[shortcut]
       this.storedShortcuts = this.data.shortcuts
     } else if (shortcut) this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
