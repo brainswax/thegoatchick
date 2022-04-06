@@ -9,6 +9,7 @@ import * as cenv from 'custom-env'
 import crypto from 'crypto'
 import WindowHerder from './windowHerder.mjs'
 import SceneHerder from './sceneHerder.mjs'
+import linkit from './linkit.mjs'
 
 cenv.env(process.env.NODE_ENV)
 
@@ -276,7 +277,8 @@ class AdminStore {
   function onChatHandler (target, context, msg) {
     if (context['display-name'] === 'HerdBoss') return // ignore the bot
 
-    chatBot(msg, context)
+    chatBot(context, msg) // Process chat commands
+    linkit(context, msg) // Send any links to slack
   }
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
@@ -306,7 +308,7 @@ class AdminStore {
     chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for subscribers')
   }
 
-  function chatBot (str, context) {
+  function chatBot (context, str) {
     // Only process the command if the message starts with a '!'
     if (!str.trim().startsWith('!')) return
 

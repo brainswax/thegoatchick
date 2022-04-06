@@ -28,6 +28,19 @@ SLACK_LOG=true
 ```
 To disable slack logging, set this to empty or anything other than 'true' and restart the application.
 
+### SLACK_LINKS_HOOK
+```shell
+SLACK_LINKS_HOOK=https://hooks.slack.com/services/XXXXX
+```
+This is a [Slack Webhook](https://api.slack.com/messaging/webhooks#create_a_webhook) that is used to repost links sent from twitch messages to a slack channel if the SLACK_LINKS environment variable is not 'false'.
+
+### SLACK_LINKS
+To enable links to be reposted to slack, defined by the SLACK_LINKS_HOOK, set to 'true'.
+```shell
+SLACK_LINKS=true
+```
+To disable reposting links to slack, set this to 'false' or remove SLACK_LINKS_HOOK and restart the application.
+
 ### OBS_ADDRESS
 The host and port to connect to the local OBS service.
 ```shell
