@@ -2,25 +2,25 @@
 ## Anyone Commands
 | Command | Description |
 |---|---|
-| _!cams_ | lists the available cams for the current scene |
-| _!ptz_ | lists all of the controllable PTZ cams available (regardless of scene) |
+| _!cams_ | Lists the available cams for the current scene |
+| _!ptz_ | Lists all of the controllable PTZ cams available (regardless of scene) |
 
 ## Subscriber Commands
 | Command | Description |
 |---|---|
-| _!scenes_ | lists the available scenes |
-| _!scene_ | sets which scene is in view |
-| _!cam_ | sets which cameras are in view |
-| _!camera_ | alias for !cam |
-| _!bell_ | puts the bell camera in view and moves to shortcut 'bell' |
+| _!scenes_ | Lists the available scenes |
+| _!scene_ | Sets which scene is in view |
+| _!cam_ | Sets which cameras are in view |
+| _!camera_ | Alias for !cam |
+| _!bell_ | Puts the bell camera in view and moves to shortcut 'bell' |
 |_!\[cam name]_ | Change the zoom or position of a cam or shows information about the cam |
 |_!cam\[N]_ | Move or resize the camera view for a specified window |
 
 ## Moderator Commands
 | Command | Description |
 |---|---|
-| _!sync_ | this will query obs and force update the current sources as well as set the window positions and sizes |
-| _!log_ | sets the log level for the various log outputs |
+| _!sync_ | Query obs and force update the current sources as well as set the view positions and sizes |
+| _!log_ | Sets the log level for the various log outputs |
 | _!admin_ | Adds a user as an admin with moderator permissions without needing a Moderator role in twitch |
 |_!mute_ | Mute the stream audio |
 |_!unmute_ | Unmute the stream audio |
@@ -151,3 +151,23 @@ These sub-commands can also be stringed together into a single command:
 If the view dimensions don't match the source camera dimensions, the camera will be stretched to fit into the view dimensions.
 
 # Logs
+The script supports multiple log outputs, which can be configured individually. The log levels are standard syslog levels and setting it will include all logs of a particular severity and higher
+
+| Log Severity Level | Description |
+|---|---|
+| error | Error condition |
+| warn | A warning that could indicate an error will or may have occurred |
+| info | Information message that require no action |
+| debug | Verbose information used to debug the application |
+
+Currently there are only two log outputs supported: console and slack.
+
+To change the log level of one of the log outputs:
+```
+!log slack:debug
+```
+
+To change the log level of multiple log outputs:
+```
+!log slack:info console:debug
+```
