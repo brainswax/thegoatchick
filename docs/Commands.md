@@ -1,4 +1,17 @@
-# Chat commands
+# Table of Contents
+1. [Chat Commands](#chat-commands)
+   1. [Anyone Commands](#anyone-commands)
+   1. [Subscriber Commands](#subscriber-commands)
+   1. [Moderator Commands](#moderator-commands)
+1. [Scenes](#scenes)
+1. [Cameras](#cameras)
+   1. [Changing Cameras](#changing-cameras)
+   1. [Moving PTZ Cameras](#moving-ptz-cameras)
+   1. [Camera Shortcuts](#camera-shortcuts)
+1. [Views](#views)
+1. [Logs](#logs)
+
+# Chat Commands
 ## Anyone Commands
 | Command | Description |
 | :--     | :-- |
