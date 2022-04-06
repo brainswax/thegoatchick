@@ -1,33 +1,33 @@
 # Chat commands
 ## Anyone Commands
 | Command | Description |
-| :-- | :-- |
+| :--     | :-- |
 | _!cams_ | Lists the available cams for the current scene |
-| _!ptz_ | Lists all of the controllable PTZ cams available (regardless of scene) |
+| _!ptz_  | Lists all of the controllable PTZ cams available (regardless of scene) |
 
 ## Subscriber Commands
-| Command | Description |
-| :-- | :-- |
-| _!scenes_ | Lists the available scenes |
-| _!scene_ | Sets which scene is in view |
-| _!cam_ | Sets which cameras are in view |
-| _!camera_ | Alias for !cam |
-| _!bell_ | Puts the bell camera in view and moves to shortcut 'bell' |
-|_!\[cam name]_ | Change the zoom or position of a cam or shows information about the cam |
-|_!cam\[N]_ | Move or resize the camera view for a specified window |
+| Command        | Description |
+| :--            | :-- |
+| _!scenes_      | Lists the available scenes |
+| _!scene_       | Sets which scene is in view |
+| _!cam_         | Sets which cameras are in view |
+| _!camera_      | Alias for !cam |
+| _!bell_        | Puts the bell camera in view and moves to shortcut 'bell' |
+| _!\[cam name]_ | Change the zoom or position of a cam or shows information about the cam |
+| _!cam\[N]_     | Move or resize the camera view for a specified window |
 
 ## Moderator Commands
-| Command | Description |
-| :-- | :-- |
-| _!sync_ | Query obs and force update the current sources as well as set the view positions and sizes |
-| _!log_ | Sets the log level for the various log outputs |
-| _!admin_ | Adds a user as an admin with moderator permissions without needing a Moderator role in twitch |
-|_!mute_ | Mute the stream audio |
-|_!unmute_ | Unmute the stream audio |
-|_!restartscript_| Restart the controller script |
-|_!stop_| Stop the stream |
-|_!start_| Start the stream |
-|_!restart_| Restart the stream |
+| Command          | Description |
+| :--              | :-- |
+| _!sync_          | Query obs and force update the current sources as well as set the view positions and sizes |
+| _!log_           | Sets the log level for the various log outputs |
+| _!admin_         | Adds a user as an admin with moderator permissions without needing a Moderator role in twitch |
+| _!mute_          | Mute the stream audio |
+| _!unmute_        | Unmute the stream audio |
+| _!restartscript_ | Restart the controller script |
+| _!stop_          | Stop the stream |
+| _!start_         | Start the stream |
+| _!restart_       | Restart the stream |
 
 # Scenes
 To get the list of available scenes:
@@ -63,17 +63,17 @@ PTZ cams: does, parlor, yard
 ```
 
 The following sub-commands can be used to move the cameras:
-| Command | Description | Example |
-| :-- | :-- | :-- |
-|\[u, up][N] | Move the camera up from the current position by N degrees | !does u10 |
-|\[d, down][N] | Move the camera down from the current position by N degrees | !does d10 |
-|\[t, tilt][N] | Tilt the camera to an absolute value N (0-90 degrees) | !does t60 |
-|\[l, left][N] | Move the camera left from the current position by N degrees | !does l10 |
-|\[r, right][N] | Move the camera right from the current position by N degrees | !does r10 |
-|\[p, pan][N] | Pan the camera to an absolute value N (0-360 degrees) | !does p180 |
-|\[i, in][N] | Zoom in N percent from the current zoom | !does i10 |
-|\[o, out][N] | Zoom out N percent from the current zoom | !does o10 |
-|\[z, zoom][N] | Zoom to an absolute value N (0 to 100%) | !does z100 |
+| Command        | Description                                                  | Example |
+| :--            | :--                                                          | :-- |
+| \[u, up][N]    | Move the camera up from the current position by N degrees    | !does u10 |
+| \[d, down][N]  | Move the camera down from the current position by N degrees  | !does d10 |
+| \[t, tilt][N]  | Tilt the camera to an absolute value N (0-90 degrees)        | !does t60 |
+| \[l, left][N]  | Move the camera left from the current position by N degrees  | !does l10 |
+| \[r, right][N] | Move the camera right from the current position by N degrees | !does r10 |
+| \[p, pan][N]   | Pan the camera to an absolute value N (0-360 degrees)        | !does p180 |
+| \[i, in][N]    | Zoom in N percent from the current zoom                      | !does i10 |
+| \[o, out][N]   | Zoom out N percent from the current zoom                     | !does o10 |
+| \[z, zoom][N]  | Zoom to an absolute value N (0 to 100%)                      | !does z100 |
 
 These sub-commands can also be stringed together into a single command:
 ```
@@ -136,12 +136,12 @@ cam0 x:57 y:73 w:1328 h:747
 ```
 
 The following sub-commands can be used to change the position and/or size of a view:
-| Command | Description | Example |
-| :-- | :-- | :-- |
-|x:\[N] | Move the view to an absolute position N pixels from the left of the origin | !cam0 x:10 |
-|y:\[N] | Move the view to an absolute position N pixels down from the origin | !cam0 y:10 |
-|\[h, height]:[N] | Change the hight of a view to N pixels | !cam0 h:720 |
-|\[w, width]:[N] | Change the width of a view to N pixels | !cam0 w:1280 |
+| Command          | Description                                                                | Example |
+| :--              | :--                                                                        | :-- |
+| x:\[N]           | Move the view to an absolute position N pixels from the left of the origin | !cam0 x:10 |
+| y:\[N]           | Move the view to an absolute position N pixels down from the origin        | !cam0 y:10 |
+| \[h, height]:[N] | Change the hight of a view to N pixels                                     | !cam0 h:720 |
+| \[w, width]:[N]  | Change the width of a view to N pixels                                     | !cam0 w:1280 |
 
 These sub-commands can also be stringed together into a single command:
 ```
@@ -151,14 +151,14 @@ These sub-commands can also be stringed together into a single command:
 If the view dimensions don't match the source camera dimensions, the camera will be stretched to fit into the view dimensions.
 
 # Logs
-The script supports multiple log outputs, which can be configured individually. The log levels are standard syslog levels and setting it will include all logs of a particular severity and higher
+The script supports multiple log outputs, which can be configured individually. The log levels are standard syslog levels and setting it will include all logs of a particular severity and higher. From highest to lowest:
 
 | Log Severity Level | Description |
-| :-- | :-- |
-| error | Error condition |
-| warn | A warning that could indicate an error will or may have occurred |
-| info | Information message that require no action |
-| debug | Verbose information used to debug the application |
+| :--                | :-- |
+| error              | Error condition |
+| warn               | A warning that could indicate an error will or may have occurred |
+| info               | Information message that require no action |
+| debug              | Verbose information used to debug the application |
 
 Currently there are only two log outputs supported: console and slack.
 
