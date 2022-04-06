@@ -12,17 +12,19 @@ This is only a high level overview, so I highly recommend reading more detailed 
 
 ## Preparing For Birth
 1. The gestation period is 150 days for standard goats and 145 days for miniature breeds. Birth is usually within a day or two of that, but like humans can happen earlier or later.
-1. Identifying labor:
-  * The broad sacrotuberous ligaments on either side of her rump will loosen and can be felt. Feels like a pencil when firm.
-  * The udder fills and gets tight.
-  * The doe will seek a safe space to birth away from other goats.
 1. When getting close to the due date, check the ligaments and udder often, multiple times daily.
 1. Separate the doe from the herd once she goes into early labor.
+1. A normal delivery takes about 5 hours (4 for dilation and 1 to give birth)
 
 ### First Stage - Early Labor
-1. The early stage of labor can last hours.
-  * A long first phase may indicate the kid is not positioned correctly (dystocia).
-1. She will be restless, vocal, pawing the ground, and will lick. Contractions will get stronger and closer together as birth approaches.
+1. The early stage of labor can last several hours, but a long first phase may indicate the kid is not positioned correctly (dystocia).
+1. Identifying labor:
+  * The broad sacrotuberous ligaments on either side of her rump will soften and eventually disappear.
+  * The udder fills and gets tight.
+  * The doe will seek a safe space to birth away from other goats.
+1. She will be restless, vocal, paw the ground, stargaze, her back legs will get stiff/posty, and she will lick.
+1. Her tail will raise and her vulva will sink in during contractions and they will get stronger and closer together as birth approaches.
+1. Once the water breaks, she should give birth within 30 minutes to an hour.
 
 ### Second Stage - Active Labor
 1. Active labor starts when she begins to push.
@@ -51,10 +53,10 @@ This is only a high level overview, so I highly recommend reading more detailed 
 # The Kids
 ## Immediately After Birth
 1. Make sure airway is clear and they're breathing - they can suffocate easily as soon as the umbilical chord is cut.
-1. Dip umbilical chord in iodine up to the belly.
+1. Cut the umbilical chord about an inch from the body and dip in iodine up to the belly.
 1. (Optional) Apply iodine to hooves.
 1. Feed colostrum - give teats a squeeze to clear any natural plugs first.
-  * If the kid won't eat, check body temp - tongue should feel warm to your (clean) finger.
+  * If the kid won't eat within 30 minutes, check body temp - tongue should feel warm to your (clean) finger.
 1. Don't leave before baby has a full belly.
   * If the kid can't stand after 30 minutes, separate the kid and give Selenium. Feed warm black coffee or molasses for energy.
   * If the kid doesn't eat within 2 hours, he needs to be tube fed.
@@ -98,5 +100,7 @@ This is only a high level overview, so I highly recommend reading more detailed 
 1. Castrate bucks.
 
 # Additional Resources
-* [Goats Extension Foundation](https://goats.extension.org/) especially for the [Goat Nutrition Minerals](https://goats.extension.org/goat-nutrition-minerals/) section.
+* [Goats Extension Foundation](https://goats.extension.org/)
+  * [Goat Reproduction Parturition/Kidding](https://goats.extension.org/goat-reproduction-parturition-kidding/)
+  * [Goat Nutrition Minerals](https://goats.extension.org/goat-nutrition-minerals/)
 * [Cattle Estrous Cycle](https://www.fda.gov/animal-veterinary/product-safety-information/cattle-estrous-cycle-and-fda-approved-animal-drugs-control-and-synchronize-estrus-resource-producers) on the FDA website.
