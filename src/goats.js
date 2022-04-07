@@ -275,7 +275,7 @@ class AdminStore {
   }
 
   function onChatHandler (target, context, msg) {
-    if (context['display-name'] === 'HerdBoss') return // ignore the bot
+    if (app.config.ignore && app.config.ignore.includes(context['display-name'])) return // ignore the bots
 
     chatBot(context, msg) // Process chat commands
     linkit(context, msg) // Send any links to slack
