@@ -246,11 +246,12 @@ export default class OBSView {
 
   /**
    * Get the source object by alias name
-   * @param {string} source an alias for the source
-   * @param {string} scene the name of the scene
+   * @param {string} sourceAlias an alias for the source
+   * @param {string} sceneName the name of the scene
    * @returns the source objevt returned from OBS
    */
   getSourceByAlias (sourceAlias, sceneName) {
+    sceneName = sceneName || this.currentScene
     if (this.scenes[sceneName]) {
       const sourceName = this.scenes[sceneName].sourceAliases[sourceAlias]
       if (sourceName) {
