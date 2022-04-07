@@ -42,7 +42,7 @@ function formatGeneric (context, message) {
 
 function getFormattedLinks (context, message) {
   const formatted = []
-  const links = message.match(/(http|https):\/\/\S+/gi)
+  const links = message.match(/(http|https):\/\/\S+/gi) || []
 
   links.forEach(link => {
     if (link.match(/twitch.tv/)) formatted.push(formatTwitch(context, link))
