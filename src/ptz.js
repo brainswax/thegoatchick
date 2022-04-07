@@ -93,7 +93,7 @@ export default class PTZ {
   Gets the key for storing this cameras position
   */
   get positionkey () {
-    return `ptz.cam.${this.name}` // TODO: change to match a similar structure to the shortcuts key: ptz.{name}.coords
+    return `ptz.${this.name}.position`
   }
 
   /**
@@ -109,7 +109,6 @@ export default class PTZ {
         if (coords) this.logger.info(`loaded the camera position for '${this.name}': ${JSON.stringify(coords)}`)
         return this.fixupPosition(coords)
       })
-      .catch(err => this.logger.warn(`loading the camera position for '${this.name}': ${err}`))
   }
 
   set storedPosition (coords) {
@@ -134,7 +133,7 @@ export default class PTZ {
   }
 
   move (coords) {
-    this.storePosition = coords
+    this.storedPosition = coords
     this.logger.debug(`Moving camera '${this.name}' to coordinates: ${JSON.stringify(coords)}`)
 
     try {
