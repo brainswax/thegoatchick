@@ -108,6 +108,22 @@ This will move the camera, save the shortcut 'wall' in the same position as abov
 !does feeder u20 z50 save:wall r20
 ```
 
+The following command will show information about the camera source:
+```
+!does source
+does source w:1280 h:720
+```
+
+To show a particular camera:
+```
+!does show
+```
+
+To hide a particular camera:
+```
+!does hide
+```
+
 ## Camera Shortcuts
 Camera shortcuts can be used to move the camera to named positions (and zoom) for each individual camera. To get the shortcuts associated with a cam:
 

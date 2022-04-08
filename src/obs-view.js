@@ -214,7 +214,7 @@ export default class OBSView {
   showInfo (chat, channel, alias, value) {
     const source = this.getSourceByAlias(alias)
     if (source) {
-      chat.say(channel, `source w:${source.sourceWidth}, h:${source.sourceHeight}`)
+      chat.say(channel, `${alias} source w:${source.sourceWidth} h:${source.sourceHeight}`)
     } else {
       this.logger.info(`No source info for '${alias}'`)
     }
