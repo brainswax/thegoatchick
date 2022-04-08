@@ -90,11 +90,11 @@ class ScenesRenderer {
     return this.obs.send('GetSceneItemProperties', sceneItem)
   }
 
-  async getSceneSource (sceneName, sourceData) {
-    return this.getSceneItemProperties(sceneName, sourceData.name)
-      .catch(e => this.logger.error(`Error getting scene properties for scene: ${sceneName}, source: ${sourceData.name}: ${JSON.stringify(e)}`))
+  async getSceneSource (sceneName, sourceName, kind) {
+    return this.getSceneItemProperties(sceneName, sourceName)
+      .catch(e => this.logger.error(`Error getting scene properties for scene: ${sceneName}, source: ${sourceName}: ${JSON.stringify(e)}`))
       .then(source => {
-        source.kind = sourceData.type
+        source.kind = kind
         return source
       })
   }
@@ -102,7 +102,7 @@ class ScenesRenderer {
   async getSceneSources (sceneData) {
     const sources = {}
     return Promise.all(sceneData.sources.map(async sourceData => {
-      return this.getSceneSource(sceneData.name, sourceData)
+      return this.getSceneSource(sceneData.name, sourceData.name, sourceData.type)
         .then(source => {
           sources[source.name] = source
         })
@@ -555,15 +555,12 @@ export default class OBSView {
     const sceneItem = { item: sourceName }
     sceneItem['scene-name'] = sceneName
 
-    return this.obs.send('GetSceneItemProperties', sceneItem) // Get the source info from obs
-      .then(source => { // Add the source to the scene
+    return this.getSceneSource(sceneName, sourceName, kind)
+      .then(source => {
         this.scenes[sceneName].sources[source.name] = source
-        this.scenes[sceneName].sources[source.name].kind = kind
-      })
-      .then(() => { // Add an alias for the new source
         this.addSceneAlias(sourceName, sourceName)
+        this.logger.debug(`Added source '${sourceName}' for scene '${sceneName}'`)
       })
-      .then(() => this.logger.info(`Added source '${sourceName}' for scene '${sceneName}'`))
   }
 
   updateSourceItem (sceneName, source) {
