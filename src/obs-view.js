@@ -155,6 +155,8 @@ export default class OBSView {
 
     this.commands = new Map()
     this.commands.set('source', (...args) => this.showInfo(...args))
+    this.commands.set('show', (...args) => this.showSource(...args))
+    this.commands.set('hide', (...args) => this.hideSource(...args))
   }
 
   /**
@@ -218,6 +220,29 @@ export default class OBSView {
     }
   }
 
+  async setSceneItemRender (sourceName, sceneName, render = false) {
+    const item = { source: sourceName, render: render }
+    item['scene-name'] = sceneName
+    return this.obs.send('SetSceneItemRender', item)
+      .catch(e => { this.logger.warn(`Unable to ${render ? 'show': 'hide'} source '${sourceName}' in scene '${sceneName}': ${e.error}`) })
+  }
+
+  showSource (chat, channel, alias, value) {
+    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    if (sourceName) {
+      if (value === 'false') this.setSceneItemRender(sourceName, this.currentScene, false)
+      else this.setSceneItemRender(sourceName, this.currentScene, true)
+    }
+  }
+
+  hideSource (chat, channel, alias, value) {
+    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    if (sourceName) {
+      if (value === 'false') this.setSceneItemRender(sourceName, this.currentScene, true)
+      else this.setSceneItemRender(sourceName, this.currentScene, false)
+    }
+  }
+
   commandWindows (chat, channel, message) {
     this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowKinds), null, 2)}`)
@@ -257,6 +282,13 @@ export default class OBSView {
       if (sourceName) {
         return this.scenes[sceneName].sources[sourceName]
       }
+    }
+  }
+
+  getSourceNameByAlias (sourceAlias, sceneName) {
+    sceneName = sceneName || this.currentScene
+    if (this.scenes[sceneName]) {
+      return this.scenes[sceneName].sourceAliases[sourceAlias]
     }
   }
 
