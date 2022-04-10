@@ -483,12 +483,12 @@ class AdminStore {
           break
         default: {
           const cam = match.replace(/^[!]+/, '')
-          if (app.ptz.cams.has(cam) || obsView.getAliases().includes(cam) || match.startsWith('!cam')) {
+          if (app.ptz.cams.has(cam) || obsView.hasSourceAlias(cam) || match.startsWith('!cam')) {
             if (isSubscriber(context)) {
               // A command for a PTZ camera
               if (app.ptz.cams.has(cam)) app.ptz.cams.get(cam).command(str)
               // A command to modify an OBS source cam
-              if (obsView.getAliases().includes(cam)) obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
+              if (obsView.hasSourceAlias(cam)) obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
               // A command for a window
               if (match.startsWith('!cam')) app.windowHerder.herd(match, str)
             } else sayForSubs()
