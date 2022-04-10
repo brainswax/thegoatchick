@@ -9,10 +9,10 @@ function sortWindows (a, b) {
     const bdist = Math.sqrt((b.position.x * 9 / 16) ** 2 + b.position.y ** 2) // Make it square, then find the distance
     if (adist < bdist) return -1 // Window 'a' is closer to the origin
     else if (adist > bdist) return 1 // Window 'b' is closer to the origin
-    else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
-    else if (a.position.y > b.position.y) return 1 // Window 'b' is closer to the top
     else if (a.position.x < b.position.x) return -1 // Window 'a' is closer to the left
     else if (a.position.x > b.position.x) return 1 // Window 'b' is closer to the left
+    else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
+    else if (a.position.y > b.position.y) return 1 // Window 'b' is closer to the top
   }
 
   return 0 // The windows are the same size and position
