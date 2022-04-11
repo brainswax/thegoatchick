@@ -1,17 +1,18 @@
 import { Stojo } from '@codegrill/stojo'
 
 function sortWindows (a, b) {
-  if (a.width * a.height > b.width * b.height) return -1 // Window 'a' is bigger
-  else if (a.width * a.height < b.width * b.height) return 1 // Window 'b' is bigger
+  let fudge = process.env.CAM_FUDGE ? +(process.env.CAM_FUDGE) : 0.8
+  if (a.width * a.height * fudge > b.width * b.height) return -1 // Window 'a' is bigger
+  else if (a.width * a.height < b.width * b.height * fudge) return 1 // Window 'b' is bigger
   else { // The windows are the same size, sort by distance from the origin
-    const adist = Math.sqrt(a.position.x ** 2 + a.position.y ** 2)
-    const bdist = Math.sqrt(b.position.x ** 2 + b.position.y ** 2)
-    if (adist < bdist) return -1 // Window 'a' is closer to the top left
-    else if (adist < bdist) return 1 // Window 'b' is closer to the top left
+    const adist = Math.sqrt((a.position.x * 9 / 16) ** 2 + a.position.y ** 2) // Make it square, then find the distance
+    const bdist = Math.sqrt((b.position.x * 9 / 16) ** 2 + b.position.y ** 2) // Make it square, then find the distance
+    if (adist < bdist) return -1 // Window 'a' is closer to the origin
+    else if (adist > bdist) return 1 // Window 'b' is closer to the origin
     else if (a.position.x < b.position.x) return -1 // Window 'a' is closer to the left
     else if (a.position.x > b.position.x) return 1 // Window 'b' is closer to the left
     else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
-    else if (a.position.y > b.position.y) return 1 // Window 'a' is closer to the left
+    else if (a.position.y > b.position.y) return 1 // Window 'b' is closer to the top
   }
 
   return 0 // The windows are the same size and position
@@ -292,12 +293,19 @@ export default class OBSView {
     }
   }
 
-  getAliases (scene) {
-    return Object.keys(this.scenes[scene || this.currentScene].sourceAliases)
+  hasSourceAlias (sourceAlias, sceneName) {
+    sceneName = sceneName || this.currentScene
+    return this.scenes[sceneName] && sourceAlias in this.scenes[sceneName].sourceAliases
   }
 
-  getWindows (scene) {
-    return this.scenes[scene || this.currentScene].windows
+  getAliases (sceneName) {
+    var scene = this.scenes[sceneName || this.currentScene]
+    return scene ? Object.keys(scene.sourceAliases) : null
+  }
+
+  getWindows (sceneName) {
+    var scene = this.scenes[sceneName || this.currentScene]
+    return scene ? scene.windows : null
   }
 
   /**

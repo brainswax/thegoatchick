@@ -150,3 +150,19 @@ The file is expected to be JSON with the following example format:
   }
 }
 ```
+
+## Cams
+The location of camera views (cam(0), cam1, ..., camN) are automatic, scaled to be square, and with the following sort logic:
+
+1. If CAM_FUDGE (or 80% by default) of the area of one cam is larger than the other, it's considered a lower numbered cam
+1. If the distance from the origin to the top left of the camera source is shorter (scaled to be a square), it's considered a lower numbered cam
+1. If the cam is closer to the left, it's considered a lower numbered cam
+1. If the cam is closer to the top, it's considered a lower numbered cam
+1. Otherwise, considered equal (and they're overlapping)
+
+### CAM_FUDGE
+Sets the fudge factor for sorting a camera view by area. This allows two closely sized sources to be considered equal (usually because a human resized it manually in OBS) and to sort based on distance from the origin and (x, y) coordinates. The default is 80%.
+
+```
+CAM_FUDGE=0.8
+```
