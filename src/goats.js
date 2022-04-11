@@ -275,10 +275,13 @@ class AdminStore {
   }
 
   function onChatHandler (target, context, msg) {
-    if (app.config.ignore && app.config.ignore.includes(context['display-name'])) return // ignore the bots
+    try {
+      if (app.config.ignore && app.config.ignore.includes(context['display-name'])) return // ignore the bots
 
-    chatBot(context, msg) // Process chat commands
-    linkit(context, msg) // Send any links to slack
+      chatBot(context, msg) // Process chat commands
+      linkit(context, msg) // Send any links to slack
+    }
+    catch (e) { logger.error(`Error processing chat: ${JSON.stringify(e)}, context: ${JSON.stringify(context)}`) }
   }
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
