@@ -498,8 +498,8 @@ export default class OBSView {
       if (cams[i] === sourceName) { // Found the source in current visible cams
         windows[i].position.x = source.position.x
         windows[i].position.y = source.position.y
-        windows[i].width = source.width
-        windows[i].height = source.height
+        if (source.width > 0) windows[i].width = source.width // Bug #84: don't set windows to width 0
+        if (source.height > 0) windows[i].height = source.height // Bug #84: don't set windows to height 0
         break
       }
     }
