@@ -106,13 +106,13 @@ export default class PTZ {
   get storedPosition () {
     return this.db.fetch(this.positionkey)
       .then(coords => {
-        if (coords) this.logger.info(`loaded the camera position for '${this.name}': ${JSON.stringify(coords)}`)
+        if (coords) this.logger.debug(`loaded the camera position for '${this.name}': ${JSON.stringify(coords)}`)
         return this.fixupPosition(coords)
       })
   }
 
   set storedPosition (coords) {
-    this.logger.info(`store the camera position for '${this.name}': ${JSON.stringify(coords)}`)
+    this.logger.debug(`store the camera position for '${this.name}': ${JSON.stringify(coords)}`)
     this.db.store(this.positionkey, coords) // Persist the current position
       .catch(err => this.logger.warn(`storing the camera position for '${this.name}': ${err}`))
   }
@@ -120,14 +120,14 @@ export default class PTZ {
   get storedShortcuts () {
     return this.db.fetch(this.shortcutskey)
       .then(shortcuts => {
-        if (shortcuts) this.logger.info(`loaded the camera shortcuts for '${this.name}': ${JSON.stringify(shortcuts)}`)
+        if (shortcuts) this.logger.debug(`loaded the camera shortcuts for '${this.name}': ${JSON.stringify(shortcuts)}`)
         return this.fixupShortcuts(shortcuts)
       })
       .catch(err => this.logger.warn(`loading the camera shortcuts for '${this.name}': ${err}`))
   }
 
   set storedShortcuts (shortcuts) {
-    this.logger.info(`store the camera shortcuts for '${this.name}': ${JSON.stringify(shortcuts)}`)
+    this.logger.debug(`store the camera shortcuts for '${this.name}': ${JSON.stringify(shortcuts)}`)
     this.db.store(this.shortcutskey, shortcuts)
       .catch(err => this.logger.warn(`storing the camera shortcuts for '${this.name}': ${err}`))
   }
@@ -204,7 +204,7 @@ export default class PTZ {
       if (this.cam.activeSources) { // If the camera is connected
         this.cam.getStatus({}, (err, res) => {
           if (err) this.logger.warn(`Unable to get camera status for '${this.name}': ${err}`)
-          else this.logger.info(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`)
+          else this.logger.debug(`getStatus of '${this.name}' returned: ${JSON.stringify(res, null, '  ')}`)
         })
       } else {
         this.logger.info(`unable to get status for offline camera '${this.name}'`)
@@ -216,7 +216,7 @@ export default class PTZ {
 
   saveShortcut (shortcut) {
     if (shortcut && shortcut !== '*') {
-      this.logger.info(`saving shortcut: { camera: '${this.name}', shortcut: ${JSON.stringify(shortcut)}, coords: ${JSON.stringify(this.data.coords)} }`)
+      this.logger.debug(`saving shortcut: { camera: '${this.name}', shortcut: ${JSON.stringify(shortcut)}, coords: ${JSON.stringify(this.data.coords)} }`)
       this.data.shortcuts[shortcut] = JSON.parse(JSON.stringify(this.data.coords)) // deep copy
       this.storedShortcuts = this.data.shortcuts
     }
@@ -224,11 +224,11 @@ export default class PTZ {
 
   deleteShortcut (shortcut) {
     if (shortcut === '*') { // delete all shortcuts
-      this.logger.info(`deleting all shortcuts: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts)} }`)
+      this.logger.info(`Deleting all shortcuts for camera '${this.name}'`)
       this.data.shortcuts = {}
       this.storedShortcuts = this.data.shortcuts
     } else if (shortcut && this.data.shortcuts[shortcut]) {
-      this.logger.info(`deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
+      this.logger.debug(`Deleting shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
       delete this.data.shortcuts[shortcut]
       this.storedShortcuts = this.data.shortcuts
     } else if (shortcut) this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
@@ -241,7 +241,7 @@ export default class PTZ {
       else this.chat.say(this.channel, `${this.name} shortcuts: ${snames.join(', ')}`)
     } else if (this.data.shortcuts[shortcut]) {
       this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
-      this.logger.info(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
+      this.logger.debug(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
     } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
   }
 
@@ -250,7 +250,7 @@ export default class PTZ {
       this.chat.say(this.channel, `pan: ${this.data.coords.pan}, tilt: ${this.data.coords.tilt}, zoom: ${this.data.coords.zoom}`)
     } else if (this.data.shortcuts[shortcut]) {
       this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
-      this.logger.info(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
+      this.logger.debug(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
     } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
   }
 

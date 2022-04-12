@@ -56,7 +56,7 @@ class AdminStore {
   get admins () {
     return this.db.fetch(this.key)
       .then(admins => {
-        if (admins) this.logger.info(`loaded the stored admins: ${JSON.stringify(admins)}`)
+        if (admins) this.logger.debug(`loaded the stored admins: ${JSON.stringify(admins)}`)
         return new Set(admins)
       })
       .catch(err => this.logger.warn(`loading the admins: ${err}`))
@@ -64,7 +64,7 @@ class AdminStore {
 
   set admins (admins) {
     const a = Array.from(admins)
-    this.logger.info(`store the admins: ${JSON.stringify(a)}`)
+    this.logger.debug(`store the admins: ${JSON.stringify(a)}`)
     this.db.store(this.key, a)
       .catch(err => this.logger.warn(`storing the admins: ${err}`))
   }
@@ -264,7 +264,7 @@ class AdminStore {
     .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, 2)}`))
 
   function onCheerHandler (target, context, msg) {
-    logger.info(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, 2)}`)
+    logger.debug(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, 2)}`)
 
     // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
     if (!obsView.inView('treat')) obsView.processChat('1treat')

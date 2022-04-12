@@ -178,7 +178,7 @@ export default class OBSView {
   get storedWindows () {
     return this.db.fetch(this.windowskey)
       .then(views => {
-        if (views) this.logger.info(`loaded the windows: ${JSON.stringify(views)}`)
+        if (views) this.logger.debug(`loaded the windows: ${JSON.stringify(views)}`)
         return this.fixupWindows(views)
       })
       .catch(err => this.logger.warn(`loading the camera position for '${this.name}': ${err}`))
@@ -620,7 +620,7 @@ export default class OBSView {
 
       this.logger.info(`Updated source '${source.name}' in scene '${sceneName}'`)
       this.logger.debug(`Updated source '${source.name}' in scene '${sceneName}': ${JSON.stringify(source, null, 2)}`)
-    } else this.logger.info(`Source not updated. Scene '${sceneName}' doesn't exist`)
+    } else this.logger.warn(`Source not updated. Scene '${sceneName}' doesn't exist`)
   }
 
   // Handlers for OBS events //////////////////////////////////////////////////
@@ -703,7 +703,6 @@ export default class OBSView {
   }
 
   async scenesChanged (data) {
-    this.logger.info('Updating scenes')
     this.logger.debug(`Updating scenes: ${JSON.stringify(data, null, 2)}`)
     return this.scenesRenderer.getScenes(data.scenes, this.windowKinds)
       .then(scenes => {
