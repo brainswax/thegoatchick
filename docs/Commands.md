@@ -124,6 +124,11 @@ To hide a particular camera:
 !does hide
 ```
 
+In cases where the camera is frozen or lagging behind, it can be reset by hiding the camera, waiting a few seconds, then showing the camera again. This requires the OBS source to be setup to deactivate when not showing. The following command will do the same thing in one step with a default delay of RESET_SOURCE_DELAY or 3 seconds:
+```
+!does reset
+```
+
 ## Camera Shortcuts
 Camera shortcuts can be used to move the camera to named positions (and zoom) for each individual camera. To get the shortcuts associated with a cam:
 
