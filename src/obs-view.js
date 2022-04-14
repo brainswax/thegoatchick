@@ -155,9 +155,10 @@ export default class OBSView {
     this.currentScene = ''
 
     this.commands = new Map()
-    this.commands.set('source', (...args) => this.showInfo(...args))
-    this.commands.set('show', (...args) => this.showSource(...args))
-    this.commands.set('hide', (...args) => this.hideSource(...args))
+    this.commands.set('source', (...args) => this.handleShowInfo(...args))
+    this.commands.set('show', (...args) => this.handleShowSource(...args))
+    this.commands.set('hide', (...args) => this.handleHideSource(...args))
+    this.commands.set('reset', (...args) => this.handleResetSource(...args))
   }
 
   /**
@@ -209,10 +210,11 @@ export default class OBSView {
     } else {
       const [command, value] = cmd.split(/[:]+/)
       if (this.commands.has(command)) this.commands.get(command)(chat, channel, alias, value)
+        .catch(e => { this.logger.error(`Error handling command '${command}' for alias '${alias}': ${JSON.stringify(e)}`) })
     }
   }
 
-  showInfo (chat, channel, alias, value) {
+  async handleShowInfo (chat, channel, alias, value) {
     const source = this.getSourceByAlias(alias)
     if (source) {
       chat.say(channel, `${alias} source w:${source.sourceWidth} h:${source.sourceHeight}`)
@@ -221,27 +223,52 @@ export default class OBSView {
     }
   }
 
+  async handleShowSource (chat, channel, alias, value) {
+    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    return (sourceName && value === 'false') ?
+      this.hideSource(sourceName, this.currentScene) :
+      this.showSource(sourceName, this.currentScene)
+  }
+
+  async handleHideSource (chat, channel, alias, value) {
+    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    return (sourceName && value === 'false') ?
+      this.showSource(sourceName, this.currentScene) :
+      this.hideSource(sourceName, this.currentScene)
+  }
+
+  async handleResetSource (chat, channel, alias, value) {
+    const source = this.getSourceByAlias(alias, this.currentScene)
+
+    if (source.visible) {
+      return this.resetSource(source.name, this.currentScene, value && parseInt(parseFloat(value) * 1000))
+    }
+  }
+
+  async hideSource (sourceName, sceneName) {
+    return this.setSceneItemRender(sourceName, sceneName, false)
+  }
+
+  async showSource (sourceName, sceneName) {
+    return this.setSceneItemRender(sourceName, sceneName, true)
+  }
+
+  async resetSource(sourceName, sceneName, delay) {
+    this.hideSource(sourceName, sceneName)
+      .then(() => {
+        setTimeout(() => this.showSource(sourceName, sceneName)
+          .then(() => { this.logger.info(`Reset source '${sourceName}' in scene '${sceneName}'`)})
+          .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) }),
+          delay || process.env.RESET_SOURCE_DELAY || 3000)
+      })
+      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) })
+  }
+
   async setSceneItemRender (sourceName, sceneName, render = false) {
     const item = { source: sourceName, render: render }
     item['scene-name'] = sceneName
     return this.obs.send('SetSceneItemRender', item)
       .catch(e => { this.logger.warn(`Unable to ${render ? 'show': 'hide'} source '${sourceName}' in scene '${sceneName}': ${e.error}`) })
-  }
-
-  showSource (chat, channel, alias, value) {
-    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    if (sourceName) {
-      if (value === 'false') this.setSceneItemRender(sourceName, this.currentScene, false)
-      else this.setSceneItemRender(sourceName, this.currentScene, true)
-    }
-  }
-
-  hideSource (chat, channel, alias, value) {
-    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    if (sourceName) {
-      if (value === 'false') this.setSceneItemRender(sourceName, this.currentScene, true)
-      else this.setSceneItemRender(sourceName, this.currentScene, false)
-    }
   }
 
   commandWindows (chat, channel, message) {
@@ -283,6 +310,13 @@ export default class OBSView {
       if (sourceName) {
         return this.scenes[sceneName].sources[sourceName]
       }
+    }
+  }
+
+  getSourceByName(sourceName, sceneName) {
+    sceneName = sceneName || this.currentScene
+    if (this.scenes[sceneName]) {
+      return this.scenes[sceneName].sources[sourceName]
     }
   }
 
@@ -630,7 +664,8 @@ export default class OBSView {
   }
 
   sceneItemVisibilityChanged (data) {
-    // TODO: show/hide sources
+    var source = this.getSourceByName(data.itemName, data.sceneName)
+    source.visible = data.itemVisible
     this.logger.info(`${data.itemVisible ? 'Show' : 'Hide'} source '${data.itemName}' in scene '${data.sceneName}'`)
     this.logger.debug(`Event OBS:SceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
   }
