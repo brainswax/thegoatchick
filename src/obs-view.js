@@ -158,6 +158,7 @@ export default class OBSView {
     this.commands.set('source', (...args) => this.showInfo(...args))
     this.commands.set('show', (...args) => this.showSource(...args))
     this.commands.set('hide', (...args) => this.hideSource(...args))
+    this.commands.set('reset', (...args) => this.resetSource(...args))
   }
 
   /**
@@ -244,6 +245,11 @@ export default class OBSView {
     }
   }
 
+  resetSource (chat, channel, alias, value) {
+    var source = this.getSourceByAlias(alias, this.currentScene)
+    this.logger.debug(`### reset source: ${JSON.stringify(source, null, 2)}`)
+  }
+
   commandWindows (chat, channel, message) {
     this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowKinds), null, 2)}`)
@@ -283,6 +289,13 @@ export default class OBSView {
       if (sourceName) {
         return this.scenes[sceneName].sources[sourceName]
       }
+    }
+  }
+
+  getSourceByName(sourceName, sceneName) {
+    sceneName = sceneName || this.currentScene
+    if (this.scenes[sceneName]) {
+      return this.scenes[sceneName].sources[sourceName]
     }
   }
 
@@ -630,7 +643,8 @@ export default class OBSView {
   }
 
   sceneItemVisibilityChanged (data) {
-    // TODO: show/hide sources
+    var source = this.getSourceByName(data.itemName, data.sceneName)
+    source.visible = data.itemVisible
     this.logger.info(`${data.itemVisible ? 'Show' : 'Hide'} source '${data.itemName}' in scene '${data.sceneName}'`)
     this.logger.debug(`Event OBS:SceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
   }
