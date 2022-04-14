@@ -129,6 +129,11 @@ In cases where the camera is frozen or lagging behind, it can be reset by hiding
 !does reset
 ```
 
+To reset with a custom delay, you can specify how many seconds the delay lasts (in this case, 5 seconds):
+```
+!does reset:5
+```
+
 ## Camera Shortcuts
 Camera shortcuts can be used to move the camera to named positions (and zoom) for each individual camera. To get the shortcuts associated with a cam:
 

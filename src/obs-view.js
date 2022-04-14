@@ -238,11 +238,10 @@ export default class OBSView {
   }
 
   async handleResetSource (chat, channel, alias, value) {
-    var source = this.getSourceByAlias(alias, this.currentScene)
+    const source = this.getSourceByAlias(alias, this.currentScene)
 
     if (source.visible) {
-      this.resetSource(source.name, this.currentScene)
-      this.logger.debug(`Resetting source: ${JSON.stringify(source, null, 2)}`)
+      return this.resetSource(source.name, this.currentScene, value && parseInt(parseFloat(value) * 1000))
     }
   }
 
@@ -254,12 +253,15 @@ export default class OBSView {
     return this.setSceneItemRender(sourceName, sceneName, true)
   }
 
-  async resetSource(sourceName, sceneName) {
+  async resetSource(sourceName, sceneName, delay) {
     this.hideSource(sourceName, sceneName)
       .then(() => {
-        setTimeout(() => this.showSource(sourceName, sceneName), process.env.RESET_SOURCE_DELAY || 3000)
+        setTimeout(() => this.showSource(sourceName, sceneName)
+          .then(() => { this.logger.info(`Reset source '${sourceName}' in scene '${sceneName}'`)})
+          .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) }),
+          delay || process.env.RESET_SOURCE_DELAY || 3000)
       })
-      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset`) })
+      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) })
   }
 
   async setSceneItemRender (sourceName, sceneName, render = false) {
