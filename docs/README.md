@@ -8,6 +8,7 @@
 
 ## Goating
 * [Kidding Schedule](KiddingSchedule.md)
+* DRAFT [Goat Pattern Genetics](genetics.md)
 
 ## Twin Willows Family Tree
 ![Twin Willows Farm Family Tree](/TwinWillowsFamilyTree.png)

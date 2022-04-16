@@ -1,0 +1,61 @@
+# DRAFT
+
+# Goat Pattern Genetics
+
+1. The base pattern is dictated by the agouti locus
+1. Each animal inherits one, and only one, base pattern from each parent
+1. Black is recessive
+  - Both parents must carry black to produce a black kid
+  - If the animal carries only one black pattern, then only the other pattern will be expressed
+1. Gold can range from white, cream, gold, tan to red
+1. Light colors are dominant over dark colors (i.e. dark is recessive)
+  - If the animal carries gold, then only gold will be expressed
+  - Combo patterns will only show dark where both inheritted patterns are dark
+1. Mutations can, although very rarely, cause patterns that neither parent carry
+
+## Base Patterns
+The patterm is determined by the Agouti locus referred to by the 'A' symbol.  Each of the animals two agouti loci can be one of the following (there are possibly more, but these are the ones existing in breeding goats):
+
+| Pattern      | Symbol | Dominance      |
+| ---          | ---    | ---            |
+| Gold         | A wt   | Super Donimant |
+| Buckskin     | A sc   | Dominant       |
+| Chamoisee    | A b    | Dominant       |
+| Swiss Marked | A sm   | Dominant       |
+| Cou Clair    | A pk   | Dominant       |
+| Sundgau      | A t    | Dominant       |
+| Bezoar       | A +    | Dominant       |
+| Caramel      | A?     | Dominant       |
+| Red Cheek    | A rc   | Dominant       |
+| Black        | A a    | Recessive      |
+
+## Modifiers
+Patterns and colors can inherit independent locus modifiers from each parent:
+| Color/Pattern | Locus     | Symbol | Dominance | Effect |
+| ---           | ---       | ---    | ---       | ---    |
+| Chocolate     | Brown     | B      | Bd (dominant light/dark brown) > B+ (wild type) > Br (recessive brown) | Produces brown pigment in black areas. |
+| Albino        | Chincilla | C      | ?         | Unknown in goats. May be resonsible for color dilution. |
+| Muted         | Dilution  | D      | ?         | Uncertain in goats. Turns black to grey/blue and tan to cream in mammals |
+| Red           | Extension | E      | Ed (black dominant) > E+ wild type > Er (recessive red)       | Turns black to red or yellow. 99.9% are E+E+. |
+| Spotted       | Spotting  | S      | Dominant  | Produces random white spots. Can cover entire body. |
+
+## Additional Modifiers
+* Blue eyes (dominant)
+* Polled (dominant)
+* Moon spots (?)
+* Black dominant (Ed) will override even gold
+
+# Terminology
+- _Express_ - when a genetic trait produces something visible on the animal
+- _Dominant_ - a genetic trait is considered dominant if it is expressed in an animal that only has one copy of that gene.
+- _Super Dominant_ - a genetic trait is considered super dominant if it's a dominant trait that masks other dominant traits.
+- _Recessive_ - a genetic trait is considered recessive if it requires both genes in order to express the trait.
+- _Locus_ - the location of a gene.
+- _Loci_ - plural of locus.
+
+# Sources
+
+- [Nigerian Dwarf Color Genetics](http://www.nigeriandwarfcolors.com/nigerian-dwarf-color-genetics.html) - KW Farms
+- [Color Genetics in the Nigerian Dwarf Goat](http://www.hasitall.com/genetics/) - Cris Waller, Foxcroft Nigerian Dwarf Goats
+- [Goat Color Genetics](https://cpb-us-e1.wpmucdn.com/blogs.cornell.edu/dist/5/6103/files/2020/02/goat-color-genetics.pdf) - Dr. Phillip Sponenberg, Virginai-Marylynd Regional College of Veterenary Medicine
+- [Goat Color Genetics 101](https://minifluffsrabbitry.weebly.com/goat-color-genetics-101.html) - Minifluffs Rabbitry
