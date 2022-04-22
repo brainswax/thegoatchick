@@ -1,6 +1,7 @@
 import { Cam } from 'onvif'
 import { Stojo } from '@codegrill/stojo'
 import crypto from 'crypto'
+import { promisify } from 'util'
 
 const panRegex = /(p|pan|right|left|r|l) ?(\+|-)? ?([0-9]{1,3})/m
 const tiltRegex = /(t|tilt|down|up|d|u) ?(\+|-)? ?([0-9]{1,3})/m
@@ -32,6 +33,7 @@ export default class PTZ {
     this.logger.info(`== connecting to PTZ camera host: ${options.hostname}, user: ${options.username}, hash: ${crypto.createHash('sha256').update(options.password).digest('base64')}`)
     this.chat = options.chat || new NullChat({ logger: this.logger })
     this.channel = options.channel
+
     this.cam = new Cam({
       hostname: options.hostname,
       username: options.username,
@@ -40,6 +42,8 @@ export default class PTZ {
       if (err) this.logger.warn(`== failed to connect to PTZ camera '${this.name}': ${err}`)
       else this.logger.info(`== connected to PTZ camera '${this.name}'`)
     })
+
+    this.systemReboot = promisify(this.cam.systemReboot)
 
     this.storedPosition
       .then(coords => {
@@ -65,6 +69,7 @@ export default class PTZ {
     this.commands.set('shortcuts', (...args) => this.showShortcut(...args))
     this.commands.set('position', (...args) => this.showPosition(...args))
     this.commands.set('pos', (...args) => this.showPosition(...args))
+    this.commands.set('reboot', (...args) => this.doReboot(...args))
   }
 
   /**
@@ -252,6 +257,12 @@ export default class PTZ {
       this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
       this.logger.debug(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
     } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
+  }
+
+  doReboot() {
+    this.systemReboot()
+      .then(() => { this.logger.info(`Camera '${this.name}' successfully rebooted`) })
+      .catch(e => { this.logger.error(`Unable to reboot camera '${this.name}': ${JSON.stringify(e)}`) })
   }
 
   /**
