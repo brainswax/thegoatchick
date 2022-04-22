@@ -56,7 +56,7 @@ class AdminStore {
   get admins () {
     return this.db.fetch(this.key)
       .then(admins => {
-        if (admins) this.logger.info(`loaded the stored admins: ${JSON.stringify(admins)}`)
+        if (admins) this.logger.debug(`loaded the stored admins: ${JSON.stringify(admins)}`)
         return new Set(admins)
       })
       .catch(err => this.logger.warn(`loading the admins: ${err}`))
@@ -64,7 +64,7 @@ class AdminStore {
 
   set admins (admins) {
     const a = Array.from(admins)
-    this.logger.info(`store the admins: ${JSON.stringify(a)}`)
+    this.logger.debug(`store the admins: ${JSON.stringify(a)}`)
     this.db.store(this.key, a)
       .catch(err => this.logger.warn(`storing the admins: ${err}`))
   }
@@ -264,7 +264,7 @@ class AdminStore {
     .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, 2)}`))
 
   function onCheerHandler (target, context, msg) {
-    logger.info(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, 2)}`)
+    logger.debug(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, 2)}`)
 
     // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
     if (!obsView.inView('treat')) obsView.processChat('1treat')
@@ -275,10 +275,13 @@ class AdminStore {
   }
 
   function onChatHandler (target, context, msg) {
-    if (app.config.ignore && app.config.ignore.includes(context['display-name'])) return // ignore the bots
+    try {
+      if (app.config.ignore && app.config.ignore.includes(context['display-name'])) return // ignore the bots
 
-    chatBot(context, msg) // Process chat commands
-    linkit(context, msg) // Send any links to slack
+      chatBot(context, msg) // Process chat commands
+      linkit(context, msg) // Send any links to slack
+    }
+    catch (e) { logger.error(`Error processing chat: ${JSON.stringify(e)}, context: ${JSON.stringify(context)}`) }
   }
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
@@ -483,12 +486,12 @@ class AdminStore {
           break
         default: {
           const cam = match.replace(/^[!]+/, '')
-          if (app.ptz.cams.has(cam) || obsView.getAliases().includes(cam) || match.startsWith('!cam')) {
+          if (app.ptz.cams.has(cam) || obsView.hasSourceAlias(cam) || match.startsWith('!cam')) {
             if (isSubscriber(context)) {
               // A command for a PTZ camera
               if (app.ptz.cams.has(cam)) app.ptz.cams.get(cam).command(str)
               // A command to modify an OBS source cam
-              if (obsView.getAliases().includes(cam)) obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
+              if (obsView.hasSourceAlias(cam)) obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
               // A command for a window
               if (match.startsWith('!cam')) app.windowHerder.herd(match, str)
             } else sayForSubs()

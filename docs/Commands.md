@@ -108,6 +108,32 @@ This will move the camera, save the shortcut 'wall' in the same position as abov
 !does feeder u20 z50 save:wall r20
 ```
 
+The following command will show information about the camera source:
+```
+!does source
+does source w:1280 h:720
+```
+
+To show a particular camera:
+```
+!does show
+```
+
+To hide a particular camera:
+```
+!does hide
+```
+
+In cases where the camera is frozen or lagging behind, it can be reset by hiding the camera, waiting a few seconds, then showing the camera again. This requires the OBS source to be setup to deactivate when not showing. The following command will do the same thing in one step with a default delay of RESET_SOURCE_DELAY or 3 seconds:
+```
+!does reset
+```
+
+To reset with a custom delay, you can specify how many seconds the delay lasts (in this case, 5 seconds):
+```
+!does reset:5
+```
+
 ## Camera Shortcuts
 Camera shortcuts can be used to move the camera to named positions (and zoom) for each individual camera. To get the shortcuts associated with a cam:
 

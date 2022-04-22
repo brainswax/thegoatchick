@@ -1,17 +1,18 @@
 import { Stojo } from '@codegrill/stojo'
 
 function sortWindows (a, b) {
-  if (a.width * a.height > b.width * b.height) return -1 // Window 'a' is bigger
-  else if (a.width * a.height < b.width * b.height) return 1 // Window 'b' is bigger
+  let fudge = process.env.CAM_FUDGE ? +(process.env.CAM_FUDGE) : 0.8
+  if (a.width * a.height * fudge > b.width * b.height) return -1 // Window 'a' is bigger
+  else if (a.width * a.height < b.width * b.height * fudge) return 1 // Window 'b' is bigger
   else { // The windows are the same size, sort by distance from the origin
-    const adist = Math.sqrt(a.position.x ** 2 + a.position.y ** 2)
-    const bdist = Math.sqrt(b.position.x ** 2 + b.position.y ** 2)
-    if (adist < bdist) return -1 // Window 'a' is closer to the top left
-    else if (adist < bdist) return 1 // Window 'b' is closer to the top left
+    const adist = Math.sqrt((a.position.x * 9 / 16) ** 2 + a.position.y ** 2) // Make it square, then find the distance
+    const bdist = Math.sqrt((b.position.x * 9 / 16) ** 2 + b.position.y ** 2) // Make it square, then find the distance
+    if (adist < bdist) return -1 // Window 'a' is closer to the origin
+    else if (adist > bdist) return 1 // Window 'b' is closer to the origin
     else if (a.position.x < b.position.x) return -1 // Window 'a' is closer to the left
     else if (a.position.x > b.position.x) return 1 // Window 'b' is closer to the left
     else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
-    else if (a.position.y > b.position.y) return 1 // Window 'a' is closer to the left
+    else if (a.position.y > b.position.y) return 1 // Window 'b' is closer to the top
   }
 
   return 0 // The windows are the same size and position
@@ -154,7 +155,10 @@ export default class OBSView {
     this.currentScene = ''
 
     this.commands = new Map()
-    this.commands.set('source', (...args) => this.showInfo(...args))
+    this.commands.set('source', (...args) => this.handleShowInfo(...args))
+    this.commands.set('show', (...args) => this.handleShowSource(...args))
+    this.commands.set('hide', (...args) => this.handleHideSource(...args))
+    this.commands.set('reset', (...args) => this.handleResetSource(...args))
   }
 
   /**
@@ -175,7 +179,7 @@ export default class OBSView {
   get storedWindows () {
     return this.db.fetch(this.windowskey)
       .then(views => {
-        if (views) this.logger.info(`loaded the windows: ${JSON.stringify(views)}`)
+        if (views) this.logger.debug(`loaded the windows: ${JSON.stringify(views)}`)
         return this.fixupWindows(views)
       })
       .catch(err => this.logger.warn(`loading the camera position for '${this.name}': ${err}`))
@@ -206,16 +210,65 @@ export default class OBSView {
     } else {
       const [command, value] = cmd.split(/[:]+/)
       if (this.commands.has(command)) this.commands.get(command)(chat, channel, alias, value)
+        .catch(e => { this.logger.error(`Error handling command '${command}' for alias '${alias}': ${JSON.stringify(e)}`) })
     }
   }
 
-  showInfo (chat, channel, alias, value) {
+  async handleShowInfo (chat, channel, alias, value) {
     const source = this.getSourceByAlias(alias)
     if (source) {
-      chat.say(channel, `source w:${source.sourceWidth}, h:${source.sourceHeight}`)
+      chat.say(channel, `${alias} source w:${source.sourceWidth} h:${source.sourceHeight}`)
     } else {
       this.logger.info(`No source info for '${alias}'`)
     }
+  }
+
+  async handleShowSource (chat, channel, alias, value) {
+    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    return (sourceName && value === 'false') ?
+      this.hideSource(sourceName, this.currentScene) :
+      this.showSource(sourceName, this.currentScene)
+  }
+
+  async handleHideSource (chat, channel, alias, value) {
+    var sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    return (sourceName && value === 'false') ?
+      this.showSource(sourceName, this.currentScene) :
+      this.hideSource(sourceName, this.currentScene)
+  }
+
+  async handleResetSource (chat, channel, alias, value) {
+    const source = this.getSourceByAlias(alias, this.currentScene)
+
+    if (source.visible) {
+      return this.resetSource(source.name, this.currentScene, value && parseInt(parseFloat(value) * 1000))
+    }
+  }
+
+  async hideSource (sourceName, sceneName) {
+    return this.setSceneItemRender(sourceName, sceneName, false)
+  }
+
+  async showSource (sourceName, sceneName) {
+    return this.setSceneItemRender(sourceName, sceneName, true)
+  }
+
+  async resetSource(sourceName, sceneName, delay) {
+    this.hideSource(sourceName, sceneName)
+      .then(() => {
+        setTimeout(() => this.showSource(sourceName, sceneName)
+          .then(() => { this.logger.info(`Reset source '${sourceName}' in scene '${sceneName}'`)})
+          .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) }),
+          delay || process.env.RESET_SOURCE_DELAY || 3000)
+      })
+      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) })
+  }
+
+  async setSceneItemRender (sourceName, sceneName, render = false) {
+    const item = { source: sourceName, render: render }
+    item['scene-name'] = sceneName
+    return this.obs.send('SetSceneItemRender', item)
+      .catch(e => { this.logger.warn(`Unable to ${render ? 'show': 'hide'} source '${sourceName}' in scene '${sceneName}': ${e.error}`) })
   }
 
   commandWindows (chat, channel, message) {
@@ -260,12 +313,33 @@ export default class OBSView {
     }
   }
 
-  getAliases (scene) {
-    return Object.keys(this.scenes[scene || this.currentScene].sourceAliases)
+  getSourceByName(sourceName, sceneName) {
+    sceneName = sceneName || this.currentScene
+    if (this.scenes[sceneName]) {
+      return this.scenes[sceneName].sources[sourceName]
+    }
   }
 
-  getWindows (scene) {
-    return this.scenes[scene || this.currentScene].windows
+  getSourceNameByAlias (sourceAlias, sceneName) {
+    sceneName = sceneName || this.currentScene
+    if (this.scenes[sceneName]) {
+      return this.scenes[sceneName].sourceAliases[sourceAlias]
+    }
+  }
+
+  hasSourceAlias (sourceAlias, sceneName) {
+    sceneName = sceneName || this.currentScene
+    return this.scenes[sceneName] && sourceAlias in this.scenes[sceneName].sourceAliases
+  }
+
+  getAliases (sceneName) {
+    var scene = this.scenes[sceneName || this.currentScene]
+    return scene ? Object.keys(scene.sourceAliases) : null
+  }
+
+  getWindows (sceneName) {
+    var scene = this.scenes[sceneName || this.currentScene]
+    return scene ? scene.windows : null
   }
 
   /**
@@ -458,8 +532,8 @@ export default class OBSView {
       if (cams[i] === sourceName) { // Found the source in current visible cams
         windows[i].position.x = source.position.x
         windows[i].position.y = source.position.y
-        windows[i].width = source.width
-        windows[i].height = source.height
+        if (source.width > 0) windows[i].width = source.width // Bug #84: don't set windows to width 0
+        if (source.height > 0) windows[i].height = source.height // Bug #84: don't set windows to height 0
         break
       }
     }
@@ -577,7 +651,7 @@ export default class OBSView {
 
       this.logger.info(`Updated source '${source.name}' in scene '${sceneName}'`)
       this.logger.debug(`Updated source '${source.name}' in scene '${sceneName}': ${JSON.stringify(source, null, 2)}`)
-    } else this.logger.info(`Source not updated. Scene '${sceneName}' doesn't exist`)
+    } else this.logger.warn(`Source not updated. Scene '${sceneName}' doesn't exist`)
   }
 
   // Handlers for OBS events //////////////////////////////////////////////////
@@ -587,7 +661,8 @@ export default class OBSView {
   }
 
   sceneItemVisibilityChanged (data) {
-    // TODO: show/hide sources
+    var source = this.getSourceByName(data.itemName, data.sceneName)
+    source.visible = data.itemVisible
     this.logger.info(`${data.itemVisible ? 'Show' : 'Hide'} source '${data.itemName}' in scene '${data.sceneName}'`)
     this.logger.debug(`Event OBS:SceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
   }
@@ -660,7 +735,6 @@ export default class OBSView {
   }
 
   async scenesChanged (data) {
-    this.logger.info('Updating scenes')
     this.logger.debug(`Updating scenes: ${JSON.stringify(data, null, 2)}`)
     return this.scenesRenderer.getScenes(data.scenes, this.windowKinds)
       .then(scenes => {
