@@ -23,19 +23,21 @@ logger.level.console = logger[process.env.LOG_LEVEL_CONSOLE] || logger.level.con
 logger.level.slack = logger[process.env.LOG_LEVEL_SLACK] || logger.level.slack
 
 /**
-Get the PTZ config and connect to the cameras
-@param configFile the name of the JSON config file with the camera options
-@return a promise to a Map of camera names to instances
-*/
-async function getPTZCams (map, names, chat, channel, configFile, options = []) {
+ * Get the PTZ config and connect to the cameras
+ * @param {Map} map to populate with Cam objects
+ * @param {Array} names to populate with camera names
+ * @param {string} configFile the config file to load the camera information from
+ * @param {string} element the element in the config file to grab the list from
+ * @param {Object} options the options given to the Cam object
+ * @returns an empty promise
+ */
+async function initCams (map, names, configFile, element, options = {}) {
   return import(configFile)
-    .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
+    .catch(e => { logger.error(`Unable to import '${options.configFile}': ${e}`) })
     .then(conf => {
-      // This assumes that the camera options are under the "cams" entry in the JSON file
-      for (const [key, value] of Object.entries(conf.default.cams)) {
+      // Grab the element entry from the JSON file ("cams" or "static")
+      for (const [key, value] of Object.entries(conf.default[element])) {
         value.name = key
-        value.chat = chat
-        value.channel = channel
         Object.assign(value, options)
         map.set(key, new PTZ(value))
         names.push(key.toLocaleLowerCase())
@@ -74,9 +76,17 @@ class AdminStore {
   const app = {}
   app.exited = false
   app.obs = {}
+
+  // PTZ controllable cameras
   app.ptz = {}
   app.ptz.names = []
   app.ptz.cams = new Map()
+
+  // Non-PTZ network cams
+  app.ipcams = {}
+  app.ipcams.names = []
+  app.ipcams.cams = new Map()
+
   app.obs.retries = 0
   app.stream = {}
   app.shutdown = []
@@ -253,9 +263,14 @@ class AdminStore {
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
-  await getPTZCams(app.ptz.cams, app.ptz.names, chat, process.env.TWITCH_CHANNEL, process.env.PTZ_CONFIG, { logger: logger, db: db })
-    .then(() => logger.info('== loaded cameras'))
-    .catch(err => logger.error(`== error loading cameras: ${err}`))
+  await initCams(app.ptz.cams, app.ptz.names, process.env.PTZ_CONFIG, "cams", { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
+    .then(() => logger.info('== loaded PTZ cameras'))
+    .catch(err => logger.error(`== error loading PTZ cameras: ${err}`))
+
+  // Load any non-PTZ network cameras
+  await initCams(app.ipcams.cams, app.ipcams.names, process.env.PTZ_CONFIG, "static", { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
+    .then(() => logger.info('== loaded IP cameras'))
+    .catch(err => logger.error(`== error loading IP cameras: ${err}`))
 
   // Connect to Twitch
   logger.info(`== connecting to twitch: ${process.env.TWITCH_USER}@${process.env.TWITCH_CHANNEL}`)
@@ -486,16 +501,31 @@ class AdminStore {
           break
         default: {
           const cam = match.replace(/^[!]+/, '')
-          if (app.ptz.cams.has(cam) || obsView.hasSourceAlias(cam) || match.startsWith('!cam')) {
-            if (isSubscriber(context)) {
-              // A command for a PTZ camera
-              if (app.ptz.cams.has(cam)) app.ptz.cams.get(cam).command(str)
-              // A command to modify an OBS source cam
-              if (obsView.hasSourceAlias(cam)) obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
-              // A command for a window
-              if (match.startsWith('!cam')) app.windowHerder.herd(match, str)
-            } else sayForSubs()
+          const sub = isSubscriber(context)
+          let saySubsOnly = false
+
+          // A command for a PTZ camera
+          if (app.ptz.cams.has(cam)) {
+            if (sub) app.ptz.cams.get(cam).command(str)
+            else saySubsOnly = true
           }
+          // A command for a non-PTZ camera
+          if (app.ipcams.cams.has(cam)) {
+            if (sub) app.ipcams.cams.get(cam).command(str)
+            else saySubsOnly = true
+          }
+          // A command to modify an OBS source cam
+          if (obsView.hasSourceAlias(cam)) {
+            if (sub) obsView.command(chat, process.env.TWITCH_CHANNEL, cam, str)
+            else saySubsOnly = true
+          }
+          // A command for a window
+          if (match.startsWith('!cam')) {
+            if (sub) app.windowHerder.herd(match, str)
+            else saySubsOnly = true
+          }
+
+          if (saySubsOnly) sayForSubs()
         }
       }
     })

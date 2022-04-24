@@ -765,7 +765,6 @@ export default class OBSView {
             this.sceneAliases = getSceneAliases(scenes)
 
             this.logger.info(`Synced scenes from OBS: '${Object.keys(this.scenes).join('\', \'')}'`)
-            this.logger.debug(`OBS Scenes: ${JSON.stringify(this.scenes, null, 2)}`)
           })
           .catch(e => { this.logger.error(`Error syncing from OBS: ${JSON.stringify(e)}`) })
       })

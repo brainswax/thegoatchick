@@ -268,7 +268,7 @@ export default class PTZ {
 
   doReboot() {
     this.systemReboot()
-      .then(result => { this.logger.info(`Camera '${this.name}' successfully rebooted with status '${JSON.stringify(result)}'`) })
+      .then(result => { this.logger.info(`Camera '${this.name}' successfully rebooted with status: ${JSON.stringify(result)}`) })
       .catch(e => { this.logger.error(`Unable to reboot camera '${this.name}': ${JSON.stringify(e)}`) })
   }
 
