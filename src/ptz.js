@@ -148,16 +148,13 @@ export default class PTZ {
     this.logger.debug(`Moving camera '${this.name}' to coordinates: ${JSON.stringify(coords)}`)
 
     try {
-      if (this.cam.activeSources) { // If the camera is connected
-        this.cam.absoluteMove({
-          x: this.calcPan(coords.pan),
-          y: this.calcTilt(coords.tilt),
-          zoom: this.calcZoom(coords.zoom)
-        }, (err) => { if (err) this.logger.warn(`unable to move camera ${this.name}: ${err}`) })
-      } else {
-        this.logger.info(`unable to move offline camera '${this.name}'`)
-      }
+      this.cam.absoluteMove({
+        x: this.calcPan(coords.pan),
+        y: this.calcTilt(coords.tilt),
+        zoom: this.calcZoom(coords.zoom)
+      }, (err) => { if (err) this.logger.warn(`unable to move camera ${this.name}: ${err}`) })
     } catch (err) {
+      if (this.cam.activeSources) this.logger.info(`No active sources for '${this.name}'`)
       this.logger.warn(`Cam.absoluteMove threw an exception moving camera ${this.name}: ${err}`)
     }
   }
