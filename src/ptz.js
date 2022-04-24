@@ -43,7 +43,14 @@ export default class PTZ {
       else this.logger.info(`== connected to PTZ camera '${this.name}'`)
     })
 
-    this.systemReboot = promisify(this.cam.systemReboot)
+    this.systemReboot = async () => {
+      return new Promise((resolve, reject) => {
+        this.cam.systemReboot((err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
+    }
 
     this.storedPosition
       .then(coords => {
@@ -261,7 +268,7 @@ export default class PTZ {
 
   doReboot() {
     this.systemReboot()
-      .then(() => { this.logger.info(`Camera '${this.name}' successfully rebooted`) })
+      .then(result => { this.logger.info(`Camera '${this.name}' successfully rebooted with status '${JSON.stringify(result)}'`) })
       .catch(e => { this.logger.error(`Unable to reboot camera '${this.name}': ${JSON.stringify(e)}`) })
   }
 
