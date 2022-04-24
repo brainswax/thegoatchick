@@ -1,7 +1,6 @@
 import { Cam } from 'onvif'
 import { Stojo } from '@codegrill/stojo'
 import crypto from 'crypto'
-import { promisify } from 'util'
 
 const panRegex = /(p|pan|right|left|r|l) ?(\+|-)? ?([0-9]{1,3})/m
 const tiltRegex = /(t|tilt|down|up|d|u) ?(\+|-)? ?([0-9]{1,3})/m
@@ -266,7 +265,7 @@ export default class PTZ {
     } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
   }
 
-  doReboot() {
+  doReboot () {
     this.systemReboot()
       .then(result => { this.logger.info(`Camera '${this.name}' successfully rebooted with status: ${JSON.stringify(result)}`) })
       .catch(e => { this.logger.error(`Unable to reboot camera '${this.name}': ${JSON.stringify(e)}`) })

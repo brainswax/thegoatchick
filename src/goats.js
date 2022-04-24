@@ -263,12 +263,12 @@ class AdminStore {
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
-  await initCams(app.ptz.cams, app.ptz.names, process.env.PTZ_CONFIG, "cams", { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
+  await initCams(app.ptz.cams, app.ptz.names, process.env.PTZ_CONFIG, 'cams', { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
     .then(() => logger.info('== loaded PTZ cameras'))
     .catch(err => logger.error(`== error loading PTZ cameras: ${err}`))
 
   // Load any non-PTZ network cameras
-  await initCams(app.ipcams.cams, app.ipcams.names, process.env.PTZ_CONFIG, "static", { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
+  await initCams(app.ipcams.cams, app.ipcams.names, process.env.PTZ_CONFIG, 'static', { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
     .then(() => logger.info('== loaded IP cameras'))
     .catch(err => logger.error(`== error loading IP cameras: ${err}`))
 
@@ -295,8 +295,7 @@ class AdminStore {
 
       chatBot(context, msg) // Process chat commands
       linkit(context, msg) // Send any links to slack
-    }
-    catch (e) { logger.error(`Error processing chat: ${JSON.stringify(e)}, context: ${JSON.stringify(context)}`) }
+    } catch (e) { logger.error(`Error processing chat: ${JSON.stringify(e)}, context: ${JSON.stringify(context)}`) }
   }
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
