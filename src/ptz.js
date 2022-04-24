@@ -24,7 +24,7 @@ class NullChat {
 export default class PTZ {
   constructor (options) {
     this.name = options.name || 'unnamed'
-    this.version = options.version || 1
+    this.version = options.version || 2
 
     this.logger = options.logger || console
     this.db = options.db || new Stojo({ logger: this.logger })
