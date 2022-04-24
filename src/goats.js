@@ -321,8 +321,11 @@ class AdminStore {
     app.windowHerder = new WindowHerder(options)
     app.sceneHerder = new SceneHerder(options)
   }
-  function sayForSubs () {
-    chat.say(process.env.TWITCH_CHANNEL, 'This command is reserved for subscribers')
+  function sayForSubs (message) {
+    chat.say(process.env.TWITCH_CHANNEL, message || 'This command is reserved for subscribers')
+  }
+  function sayForMods (message) {
+    chat.say(process.env.TWITCH_CHANNEL, message || 'This command is reserved for moderators')
   }
 
   function chatBot (context, str) {
@@ -501,16 +504,23 @@ class AdminStore {
         default: {
           const cam = match.replace(/^[!]+/, '')
           const sub = isSubscriber(context)
+          const mod = isModerator(context)
           let saySubsOnly = false
 
           // A command for a PTZ camera
           if (app.ptz.cams.has(cam)) {
-            if (sub) app.ptz.cams.get(cam).command(str)
+            if (str.includes(' reboot') && !mod) {
+              sayForMods('The reboot command is reserved for moderators')
+            }
+            else if (sub) app.ptz.cams.get(cam).command(str)
             else saySubsOnly = true
           }
           // A command for a non-PTZ camera
           if (app.ipcams.cams.has(cam)) {
-            if (sub) app.ipcams.cams.get(cam).command(str)
+            if (str.includes(' reboot') && !mod) {
+              sayForMods('The reboot command is reserved for moderators')
+            }
+            else if (sub) app.ipcams.cams.get(cam).command(str)
             else saySubsOnly = true
           }
           // A command to modify an OBS source cam
