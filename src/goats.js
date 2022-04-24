@@ -33,9 +33,9 @@ logger.level.slack = logger[process.env.LOG_LEVEL_SLACK] || logger.level.slack
  */
 async function initCams (map, names, configFile, element, options = {}) {
   return import(configFile)
-    .catch(e => { logger.error(`Unable to import '${options.configFile}': ${e}`) })
+    .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
     .then(conf => {
-      // Grab the element entry from the JSON file ("cams" or "static")
+      // Grab the appropriate entry from the config file
       for (const [key, value] of Object.entries(conf.default[element])) {
         value.name = key
         Object.assign(value, options)
