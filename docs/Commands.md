@@ -32,6 +32,7 @@
 ## Moderator Commands
 | Command          | Description |
 | :--              | :-- |
+| _!\[cam name] reboot_ | Reboots a camera |
 | _!sync_          | Query obs and force update the current sources as well as set the view positions and sizes |
 | _!log_           | Sets the log level for the various log outputs |
 | _!admin_         | Adds a user as an admin with moderator permissions without needing a Moderator role in twitch |
@@ -112,6 +113,11 @@ The following command will show information about the camera source:
 ```
 !does source
 does source w:1280 h:720
+```
+
+The following command will reboot an IP camera:
+```
+!does reboot
 ```
 
 To show a particular camera:

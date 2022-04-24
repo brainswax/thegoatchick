@@ -23,7 +23,7 @@ class NullChat {
 export default class PTZ {
   constructor (options) {
     this.name = options.name || 'unnamed'
-    this.version = options.version || 1
+    this.version = options.version || 2
 
     this.logger = options.logger || console
     this.db = options.db || new Stojo({ logger: this.logger })
@@ -32,6 +32,7 @@ export default class PTZ {
     this.logger.info(`== connecting to PTZ camera host: ${options.hostname}, user: ${options.username}, hash: ${crypto.createHash('sha256').update(options.password).digest('base64')}`)
     this.chat = options.chat || new NullChat({ logger: this.logger })
     this.channel = options.channel
+
     this.cam = new Cam({
       hostname: options.hostname,
       username: options.username,
@@ -40,6 +41,15 @@ export default class PTZ {
       if (err) this.logger.warn(`== failed to connect to PTZ camera '${this.name}': ${err}`)
       else this.logger.info(`== connected to PTZ camera '${this.name}'`)
     })
+
+    this.systemReboot = async () => {
+      return new Promise((resolve, reject) => {
+        this.cam.systemReboot((err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
+    }
 
     this.storedPosition
       .then(coords => {
@@ -65,6 +75,7 @@ export default class PTZ {
     this.commands.set('shortcuts', (...args) => this.showShortcut(...args))
     this.commands.set('position', (...args) => this.showPosition(...args))
     this.commands.set('pos', (...args) => this.showPosition(...args))
+    this.commands.set('reboot', (...args) => this.doReboot(...args))
   }
 
   /**
@@ -252,6 +263,12 @@ export default class PTZ {
       this.chat.say(this.channel, `${shortcut} pan: ${this.data.shortcuts[shortcut].pan}, tilt: ${this.data.shortcuts[shortcut].tilt}, zoom: ${this.data.shortcuts[shortcut].zoom}`)
       this.logger.debug(`show shortcut: { camera: '${this.name}', shortcut: ${shortcut}, coords: ${JSON.stringify(this.data.shortcuts[shortcut])} }`)
     } else this.chat.say(this.channel, `No shortcut named '${shortcut}' for cam ${this.name}`)
+  }
+
+  doReboot () {
+    this.systemReboot()
+      .then(result => { this.logger.info(`Camera '${this.name}' successfully rebooted with status: ${JSON.stringify(result)}`) })
+      .catch(e => { this.logger.error(`Unable to reboot camera '${this.name}': ${JSON.stringify(e)}`) })
   }
 
   /**
