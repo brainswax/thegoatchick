@@ -277,7 +277,14 @@ export default class OBSView {
     this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowKinds), null, 2)}`)
     this.logger.debug(`Windows: ${JSON.stringify(this.scenes[this.currentScene].windows, null, 2)}`)
-    chat.say(channel, `There are ${this.scenes[this.currentScene].windows.length} windows.`)
+    if (this.scenes[this.currentScene].windows.length === 0) chat.say(channel, 'There are currenly no windows displayed')
+    else {
+      var windows = []
+      for (var i = 0; i < this.scenes[this.currentScene].windows.length; i++) {
+        windows.push(`${i}:${this.getAliasBySourceName(this.scenes[this.currentScene].cams[i])}`)
+      }
+      chat.say(channel, `Windows: ${windows.join(', ')}`)
+    }
   }
 
   /**
@@ -326,6 +333,14 @@ export default class OBSView {
     sceneName = sceneName || this.currentScene
     if (this.scenes[sceneName]) {
       return this.scenes[sceneName].sourceAliases[sourceAlias]
+    }
+  }
+
+  getAliasBySourceName (sourceName, sceneName) {
+    sceneName = sceneName || this.currentScene
+
+    for (let alias in this.scenes[sceneName].sourceAliases) {
+      if (this.scenes[sceneName].sourceAliases[alias] === sourceName) return alias
     }
   }
 
