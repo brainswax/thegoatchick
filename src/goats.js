@@ -36,11 +36,13 @@ async function initCams (map, names, configFile, element, options = {}) {
     .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
     .then(conf => {
       // Grab the appropriate entry from the config file
-      for (const [key, value] of Object.entries(conf.default[element])) {
-        value.name = key
-        Object.assign(value, options)
-        map.set(key, new PTZ(value))
-        names.push(key.toLocaleLowerCase())
+      if (element in conf.default) {
+        for (const [key, value] of Object.entries(conf.default[element])) {
+          value.name = key
+          Object.assign(value, options)
+          map.set(key, new PTZ(value))
+          names.push(key.toLocaleLowerCase())
+        }
       }
     })
 }
@@ -511,16 +513,14 @@ class AdminStore {
           if (app.ptz.cams.has(cam)) {
             if (str.includes(' reboot') && !mod) {
               sayForMods('The reboot command is reserved for moderators')
-            }
-            else if (sub) app.ptz.cams.get(cam).command(str)
+            } else if (sub) app.ptz.cams.get(cam).command(str)
             else saySubsOnly = true
           }
           // A command for a non-PTZ camera
           if (app.ipcams.cams.has(cam)) {
             if (str.includes(' reboot') && !mod) {
               sayForMods('The reboot command is reserved for moderators')
-            }
-            else if (sub) app.ipcams.cams.get(cam).command(str)
+            } else if (sub) app.ipcams.cams.get(cam).command(str)
             else saySubsOnly = true
           }
           // A command to modify an OBS source cam
