@@ -511,16 +511,14 @@ class AdminStore {
           if (app.ptz.cams.has(cam)) {
             if (str.includes(' reboot') && !mod) {
               sayForMods('The reboot command is reserved for moderators')
-            }
-            else if (sub) app.ptz.cams.get(cam).command(str)
+            } else if (sub) app.ptz.cams.get(cam).command(str)
             else saySubsOnly = true
           }
           // A command for a non-PTZ camera
           if (app.ipcams.cams.has(cam)) {
             if (str.includes(' reboot') && !mod) {
               sayForMods('The reboot command is reserved for moderators')
-            }
-            else if (sub) app.ipcams.cams.get(cam).command(str)
+            } else if (sub) app.ipcams.cams.get(cam).command(str)
             else saySubsOnly = true
           }
           // A command to modify an OBS source cam

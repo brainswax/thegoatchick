@@ -51,6 +51,51 @@ export default class PTZ {
       })
     }
 
+    this.getDeviceInformation = async () => {
+      return new Promise((resolve, reject) => {
+        this.cam.getDeviceInformation((err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
+    }
+
+    this.getCapabilities = async () => {
+      return new Promise((resolve, reject) => {
+        this.cam.getCapabilities((err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
+    }
+
+    this.getServiceCapabilities =  async () => {
+      return new Promise((resolve, reject) => {
+        this.cam.getServiceCapabilities((err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
+    }
+
+    this.getScopes = async () => {
+      return new Promise((resolve, reject) => {
+        this.cam.getScopes((err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
+    }
+
+    this.getStatus = async (options) => {
+      return new Promise((resolve, reject) => {
+        this.cam.getStatus(options, (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
+    }
+
     this.storedPosition
       .then(coords => {
         this.data.coords = coords || { pan: 240, tilt: 20, zoom: 0 }
@@ -76,6 +121,7 @@ export default class PTZ {
     this.commands.set('position', (...args) => this.showPosition(...args))
     this.commands.set('pos', (...args) => this.showPosition(...args))
     this.commands.set('reboot', (...args) => this.doReboot(...args))
+    this.commands.set('dev', (...args) => this.doDevice(...args))
   }
 
   /**
@@ -266,6 +312,65 @@ export default class PTZ {
     this.systemReboot()
       .then(result => { this.logger.info(`Camera '${this.name}' successfully rebooted with status: ${JSON.stringify(result)}`) })
       .catch(e => { this.logger.error(`Unable to reboot camera '${this.name}': ${JSON.stringify(e)}`) })
+  }
+
+  doDevice (command) {
+    switch (command) {
+      case 'cap':
+      case 'caps':
+      case 'capabilities':
+        this.getCapabilities()
+          .then((info) => {
+            this.logger.info(`Camera '${this.name}' device capabilities: ${JSON.stringify(info, null, 2)}`)
+            this.chat.say(this.channel, `Camera '${this.name}' capabilities were sent as an information log`)
+          })
+          .catch(e => { this.logger.error(`Unable to get capabilities for '${this.name}': ${JSON.stringify(e)}`) })
+        break
+      case 'service':
+      case 'services':
+        this.getServiceCapabilities()
+          .then((info) => {
+            this.logger.info(`Camera '${this.name}' service capabilities: ${JSON.stringify(info, null, 2)}`)
+            this.chat.say(this.channel, `Camera '${this.name}' service capabilities were sent as an information log`)
+          })
+          .catch(e => { this.logger.error(`Unable to get service capabilities for '${this.name}': ${JSON.stringify(e)}`) })
+        break
+      case 'source':
+      case 'sources':
+        const sources = this.cam.activeSources
+        this.logger.info(`Camera '${this.name}' active sources: ${JSON.stringify(sources, null, 2)}`)
+        this.chat.say(this.channel, `Camera '${this.name}' active sources were sent as an information log`)
+        break
+      case 'scope':
+      case 'scopes':
+        this.getScopes()
+          .then((info) => {
+            this.logger.info(`Camera '${this.name}' scopes: ${JSON.stringify(info, null, 2)}`)
+            this.chat.say(this.channel, `Camera '${this.name}' scopes were sent as an information log`)
+          })
+          .catch(e => { this.logger.error(`Unable to get service scopes for '${this.name}': ${JSON.stringify(e)}`) })
+        break
+      case 'status':
+        this.getStatus({})
+          .then((info) => {
+            this.logger.info(`Camera '${this.name}' status: ${JSON.stringify(info, null, 2)}`)
+            this.chat.say(this.channel, `Camera '${this.name}' status was sent as an information log`)
+          })
+          .catch(e => { this.logger.error(`Unable to get service scopes for '${this.name}': ${JSON.stringify(e)}`) })
+        break
+      case 'active':
+        this.logger.info(`Camera '${this.name}' active source: ${JSON.stringify(this.cam.activeSource, null, 2)}`)
+        this.chat.say(this.channel, `Camera '${this.name}' active source was sent as an information log`)
+        break
+      default:
+        this.getDeviceInformation()
+          .then((info) => {
+            this.logger.info(`Camera '${this.name}' device info: ${JSON.stringify(info)}`)
+            this.chat.say(this.channel, `Camera '${this.name}' model ${info.model}, version ${info.firmwareVersion}`)
+          })
+          .catch(e => { this.logger.error(`Unable to get camera information for '${this.name}': ${JSON.stringify(e)}`) })
+        break
+    }
   }
 
   /**
