@@ -322,7 +322,6 @@ export default class PTZ {
         this.getCapabilities()
           .then((info) => {
             this.logger.info(`Camera '${this.name}' device capabilities: ${JSON.stringify(info, null, 2)}`)
-            this.chat.say(this.channel, `Camera '${this.name}' capabilities were sent as an information log`)
           })
           .catch(e => { this.logger.error(`Unable to get capabilities for '${this.name}': ${JSON.stringify(e)}`) })
         break
@@ -331,21 +330,18 @@ export default class PTZ {
         this.getServiceCapabilities()
           .then((info) => {
             this.logger.info(`Camera '${this.name}' service capabilities: ${JSON.stringify(info, null, 2)}`)
-            this.chat.say(this.channel, `Camera '${this.name}' service capabilities were sent as an information log`)
           })
           .catch(e => { this.logger.error(`Unable to get service capabilities for '${this.name}': ${JSON.stringify(e)}`) })
         break
       case 'source':
       case 'sources':
         this.logger.info(`Camera '${this.name}' active sources: ${JSON.stringify(this.cam.activeSources, null, 2)}`)
-        this.chat.say(this.channel, `Camera '${this.name}' active sources were sent as an information log`)
         break
       case 'scope':
       case 'scopes':
         this.getScopes()
           .then((info) => {
             this.logger.info(`Camera '${this.name}' scopes: ${JSON.stringify(info, null, 2)}`)
-            this.chat.say(this.channel, `Camera '${this.name}' scopes were sent as an information log`)
           })
           .catch(e => { this.logger.error(`Unable to get service scopes for '${this.name}': ${JSON.stringify(e)}`) })
         break
@@ -353,13 +349,11 @@ export default class PTZ {
         this.getStatus({})
           .then((info) => {
             this.logger.info(`Camera '${this.name}' status: ${JSON.stringify(info, null, 2)}`)
-            this.chat.say(this.channel, `Camera '${this.name}' status was sent as an information log`)
           })
           .catch(e => { this.logger.error(`Unable to get service scopes for '${this.name}': ${JSON.stringify(e)}`) })
         break
       case 'active':
         this.logger.info(`Camera '${this.name}' active source: ${JSON.stringify(this.cam.activeSource, null, 2)}`)
-        this.chat.say(this.channel, `Camera '${this.name}' active source was sent as an information log`)
         break
       default:
         this.getDeviceInformation()
