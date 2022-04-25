@@ -69,7 +69,7 @@ export default class PTZ {
       })
     }
 
-    this.getServiceCapabilities =  async () => {
+    this.getServiceCapabilities = async () => {
       return new Promise((resolve, reject) => {
         this.cam.getServiceCapabilities((err, result) => {
           if (err) reject(err)
@@ -337,8 +337,7 @@ export default class PTZ {
         break
       case 'source':
       case 'sources':
-        const sources = this.cam.activeSources
-        this.logger.info(`Camera '${this.name}' active sources: ${JSON.stringify(sources, null, 2)}`)
+        this.logger.info(`Camera '${this.name}' active sources: ${JSON.stringify(this.cam.activeSources, null, 2)}`)
         this.chat.say(this.channel, `Camera '${this.name}' active sources were sent as an information log`)
         break
       case 'scope':
