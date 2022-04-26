@@ -169,6 +169,19 @@ To show the position and zoom of a particular shortcut:
 feeder pan: 135, tilt: 67, zoom: 0
 ```
 
+## Debugging Cameras
+A camera 'dev' command exists, which can query cameras for various information. Since most of this information from the cameras is long and detailed and in some cases involves serial numbers, the response gets output as an information log.
+
+| Command                         | Description                           | Example |
+| :--                             | :--                                   | :--     |
+| _!\[cam name]_ dev:info         | Camera model and firmware version     | !does dev:info |
+| _!\[cam name]_ dev:capabilities | A list of camera capabilities         | !does dev:capabilities |
+| _!\[cam name]_ dev:services     | A list of camera service capabilities | !does dev:services |
+| _!\[cam name]_ dev:scopes       | A list of onvif scope URIs            | !does dev:scopes |
+| _!\[cam name]_ dev:status       | A PTZ movement status                 | !does dev:status |
+| _!\[cam name]_ dev:sources      | A list of available sources           | !does dev:sources |
+| _!\[cam name]_ dev:active       | The currently active source           | !does dev:active |
+
 # Views
 A view or window refers to the viewable cameras locations or frames in the current scene. The views are referenced by numbers which are picked automatically based on their size and position in the scene and start from 0, 1, ... N. The largest view will be considered cam0, then numbered based on the closest to the origin.
 
