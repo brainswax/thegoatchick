@@ -50,13 +50,14 @@ Patterns and colors can inherit independent locus modifiers from each parent:
 
 # Terminology
 
+- _Allele_ - a particular variation of a gene
+- _Dominant_ - a genetic trait is considered dominant if it is expressed in an animal that only has one copy of that gene
 - _Express_ - when a genetic trait produces something visible on the animal
-- _Dominant_ - a genetic trait is considered dominant if it is expressed in an animal that only has one copy of that gene.
-- _Super Dominant_ - a genetic trait is considered super dominant if it's a dominant trait that masks other dominant traits.
-- _Recessive_ - a genetic trait is considered recessive if it requires both genes in order to express the trait.
-- _Wild Type_ - when a gene is wild type, it causes the other gene in the pair to be expressed
-- _Locus_ - the location of a gene.
-- _Loci_ - plural of locus.
+- _Locus_ - the location of a gene
+- _Loci_ - plural of locus
+- _Recessive_ - a genetic trait is considered recessive if it requires both genes in order to express the trait
+- _Super Dominant_ - (my term) a genetic trait is considered super dominant if it's a dominant trait that masks other dominant traits (e.g. gold pattern)
+- _Wild Type_ - a wild type alelle is considered the normal or non-mutated variation of a gene
 
 # Sources
 

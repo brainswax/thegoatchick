@@ -24,7 +24,7 @@ This is only a high level overview, so I highly recommend reading more detailed 
   * The doe will seek a safe space to birth away from other goats.
 1. She will be restless, vocal, paw the ground, stargaze, her back legs will get stiff/posty, and she will lick.
 1. Her tail will raise and her vulva will sink in during contractions and they will get stronger and closer together as birth approaches.
-1. Once the water breaks, she should give birth within 30 minutes to an hour.
+1. If her water breaks in early labor, she should give birth within 30 minutes to an hour.
 
 ### Second Stage - Active Labor
 1. Active labor starts when she begins to push.
