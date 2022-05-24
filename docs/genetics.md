@@ -3,19 +3,20 @@
 # Goat Pattern Genetics
 
 1. The base pattern is dictated by the agouti locus
-1. Each animal inherits one, and only one, base pattern from each parent
+   - Controls the distribution of black-based (or dark) and tan-based (or light) areas
+1. Each animal inherits one, and only one, base pattern from each parent (making a pair of genes)
 1. Black is recessive
    - Both parents must carry black to produce a black kid
    - If the animal carries only one black pattern, then only the other pattern will be expressed
-1. Gold can range from white, cream, gold, tan to red
-1. Light colors are dominant over dark colors (i.e. dark is recessive)
-   - If the animal carries gold, then only gold will be expressed
-   - Combo patterns will only show dark where both inheritted patterns are dark
+1. Light areas are dominant over dark areas
+   - Patterns will only show dark where both inheritted patterns are dark
+   - If the animal carries the gold pattern, then only gold will be expressed
+1. The light color can range from white, cream, gold, tan to red (i.e. a gold pattern goat could be colored white)
 1. Mutations can, although very rarely, cause patterns that neither parent carry
 
 ## Base Patterns
 
-The pattern is determined by the Agouti locus referred to by the 'A' symbol.  Each of the animals two agouti loci can be one of the following (there are possibly more, but these are the ones existing in breeding goats):
+The pattern is determined by the Agouti locus referred to by the 'A' symbol. Each of the animals two agouti loci can be one of the following (there are possibly more, but these are the ones in existing breeding goats):
 
 | Pattern      | Symbol | Dominance      |
 | ---          | ---    | ---            |
@@ -45,8 +46,8 @@ Patterns and colors can inherit independent locus modifiers from each parent:
 
 * Blue eyes (dominant)
 * Polled (dominant)
-* Moon spots (?)
-* Black dominant (Ed) will override even gold
+* Moon spots (dominant)
+* Black dominant (Ed) will override even gold (this is only known in Angora's)
 
 # Terminology
 
@@ -56,7 +57,7 @@ Patterns and colors can inherit independent locus modifiers from each parent:
 - _Locus_ - the location of a gene
 - _Loci_ - plural of locus
 - _Recessive_ - a genetic trait is considered recessive if it requires both genes in order to express the trait
-- _Super Dominant_ - (my term) a genetic trait is considered super dominant if it's a dominant trait that masks other dominant traits (e.g. gold pattern)
+- _Super Dominant_ - (my term, not a technical term) a genetic trait is considered super dominant if it's a dominant trait that masks other dominant traits (e.g. gold pattern)
 - _Wild Type_ - a wild type alelle is considered the normal or non-mutated variation of a gene
 
 # Sources
