@@ -47,6 +47,7 @@ Patterns and colors can inherit independent locus modifiers from each parent:
 * Blue eyes (dominant)
 * Polled (dominant)
 * Moon spots (dominant)
+* Roaning (dominant) - it's believed to be a partial dominant trait, but locus is unknown
 * Black dominant (Ed) will override even gold (this is only known in Angora's)
 
 # Terminology
