@@ -159,6 +159,8 @@ export default class OBSView {
     this.commands.set('show', (...args) => this.handleShowSource(...args))
     this.commands.set('hide', (...args) => this.handleHideSource(...args))
     this.commands.set('reset', (...args) => this.handleResetSource(...args))
+    this.commands.set('mute', (...args) => this.handleMuteSource(...args))
+    this.commands.set('unmute', (...args) => this.handleUnmuteSource(...args))
   }
 
   /**
@@ -247,12 +249,34 @@ export default class OBSView {
     }
   }
 
+  async handleMuteSource (chat, channel, alias, value) {
+    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    return (sourceName && value === 'false')
+      ? this.unmuteSource(sourceName, this.currentScene)
+      : this.muteSource(sourceName, this.currentScene)
+  }
+
+  async handleUnmuteSource (chat, channel, alias, value) {
+    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    return (sourceName && value === 'false')
+      ? this.muteSource(sourceName, this.currentScene)
+      : this.unmuteSource(sourceName, this.currentScene)
+  }
+
   async hideSource (sourceName, sceneName) {
     return this.setSceneItemRender(sourceName, sceneName, false)
   }
 
   async showSource (sourceName, sceneName) {
     return this.setSceneItemRender(sourceName, sceneName, true)
+  }
+
+  async muteSource (sourceName, sceneName) {
+    // TODO
+  }
+
+  async unmuteSource (sourceName, sceneName) {
+    // TODO
   }
 
   async resetSource (sourceName, sceneName, delay) {
