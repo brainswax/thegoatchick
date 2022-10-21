@@ -313,8 +313,8 @@ export default class OBSView {
 
     if (this.currentScene && this.scenes[this.currentScene]) {
       Object.values(this.scenes[this.currentScene].sources).forEach(source => {
-        if (!kinds || kinds.includes(source.kind)) { // If kinds is null, assume any kind
-          sources.push(source.name.toLowerCase())
+        if (!kinds || kinds.includes(source.inputKind)) { // If kinds is null, assume any kind
+          sources.push(source.sourceName.toLowerCase())
         }
       })
     }
