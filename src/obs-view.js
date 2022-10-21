@@ -5,14 +5,14 @@ function sortWindows (a, b) {
   if (a.width * a.height * fudge > b.width * b.height) return -1 // Window 'a' is bigger
   else if (a.width * a.height < b.width * b.height * fudge) return 1 // Window 'b' is bigger
   else { // The windows are the same size, sort by distance from the origin
-    const adist = Math.sqrt((a.position.x * 9 / 16) ** 2 + a.position.y ** 2) // Make it square, then find the distance
-    const bdist = Math.sqrt((b.position.x * 9 / 16) ** 2 + b.position.y ** 2) // Make it square, then find the distance
+    const adist = Math.sqrt((a.x * 9 / 16) ** 2 + a.y ** 2) // Make it square, then find the distance
+    const bdist = Math.sqrt((b.x * 9 / 16) ** 2 + b.y ** 2) // Make it square, then find the distance
     if (adist < bdist) return -1 // Window 'a' is closer to the origin
     else if (adist > bdist) return 1 // Window 'b' is closer to the origin
-    else if (a.position.x < b.position.x) return -1 // Window 'a' is closer to the left
-    else if (a.position.x > b.position.x) return 1 // Window 'b' is closer to the left
-    else if (a.position.y < b.position.y) return -1 // Window 'a' is closer to the top
-    else if (a.position.y > b.position.y) return 1 // Window 'b' is closer to the top
+    else if (a.x < b.x) return -1 // Window 'a' is closer to the left
+    else if (a.x > b.x) return 1 // Window 'b' is closer to the left
+    else if (a.y < b.y) return -1 // Window 'a' is closer to the top
+    else if (a.y > b.y) return 1 // Window 'b' is closer to the top
   }
 
   return 0 // The windows are the same size and position
@@ -32,7 +32,7 @@ function getSourceAliases (sources) {
 
 function getSceneCams (windows) {
   const cams = []
-  windows.forEach(window => cams.push(window.source))
+  windows.forEach(window => cams.push(window.sourceName))
   return cams
 }
 
@@ -41,12 +41,13 @@ function getSceneWindows (scene, windowKinds) {
   for (const sourceName in scene.sources) {
     const source = scene.sources[sourceName]
 
-    if (source.visible && windowKinds.includes(source.kind)) { // Only visible media sources are treated as windows
+    if (source.sceneItemEnabled && windowKinds.includes(source.inputKind)) { // Only visible media sources are treated as windows
       windows.push({
-        source: source.name,
-        position: source.position,
-        width: source.width,
-        height: source.height
+        sourceName: source.sourceName,
+        x: source.sceneItemTransform.positionX,
+        y: source.sceneItemTransform.positionY,
+        width: source.sceneItemTransform.sourceWidth,
+        height: source.sceneItemTransform.sourceHeight
       })
     }
   }
@@ -125,7 +126,7 @@ class ScenesRenderer {
           scene.windows = getSceneWindows(scene, windowKinds)
           scene.windows.sort((a, b) => sortWindows(a, b)) // Sort the windows for cam0, cam1, etc.
           scene.cams = getSceneCams(scene.windows) // Depends on the order of the windows
-          scene.windows.forEach(window => { if (window.source) delete window.source }) // Don't need this now that we have sorted the windows
+          scene.windows.forEach(window => { if (window.sourceName) delete window.sourceName }) // Don't need the name now that we have sorted the windows
           scenes[scene.sceneName] = scene
         })
     }))
