@@ -192,7 +192,7 @@ class AdminStore {
 
   async function connectOBS (obs) {
     logger.info(`== connecting to OBS host:${process.env.OBS_ADDRESS}, hash: ${crypto.createHash('sha256').update(process.env.OBS_PASSWORD).digest('base64')}`)
-    return obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
+    return obs.connect('ws://' + process.env.OBS_ADDRESS, process.env.OBS_PASSWORD)
       .then(() => {
         app.obs.retries = 0 // Reset for the next disconnect
         logger.info('== connected to OBS')
@@ -207,7 +207,7 @@ class AdminStore {
       logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
         connectOBS(obs)
-          .then(() => obs.send('GetVideoInfo'))
+          .then(() => obs.call('GetVideoInfo'))
           .then((info) => {
             // Need the info to get the stream resolution
             app.stream.info = info
@@ -239,7 +239,9 @@ class AdminStore {
 
   // Connect to OBS
   connectOBS(obs)
-    .catch(e => logger.error(`Connect OBS failed: ${e.error}`))
+    .catch(e => {
+      logger.error(`Connect OBS failed: ${e.error}`)
+    })
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to twitch
@@ -433,7 +435,7 @@ class AdminStore {
           break
         case '!mute':
           if (isModerator(context)) {
-            obs.send('SetMute', { source: 'Audio', mute: true })
+            obs.call('SetMute', { source: 'Audio', mute: true })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream muted'))
               .catch(e => {
                 logger.error(`Unable to mute: ${JSON.stringify(e, null, 2)}`)
@@ -443,7 +445,7 @@ class AdminStore {
           break
         case '!unmute':
           if (isModerator(context)) {
-            obs.send('SetMute', { source: 'Audio', mute: false })
+            obs.call('SetMute', { source: 'Audio', mute: false })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream unmuted'))
               .catch(e => {
                 logger.error(`Unable to unmute: ${JSON.stringify(e, null, 2)}`)
@@ -460,7 +462,7 @@ class AdminStore {
           break
         case '!stop':
           if (isModerator(context)) {
-            obs.send('StopStreaming')
+            obs.call('StopStreaming')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped'))
               .catch(e => {
                 logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, 2)}`)
@@ -470,7 +472,7 @@ class AdminStore {
           break
         case '!start':
           if (isModerator(context)) {
-            obs.send('StartStreaming')
+            obs.call('StartStreaming')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream started'))
               .catch(e => {
                 logger.error(`Unable to start OBS: ${JSON.stringify(e, null, 2)}`)
@@ -480,7 +482,7 @@ class AdminStore {
           break
         case '!restart':
           if (isModerator(context)) {
-            obs.send('StopStreaming')
+            obs.call('StopStreaming')
               .then(() => {
                 chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped. Starting in...')
                 setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':Z Five') }, 5000)
@@ -489,7 +491,7 @@ class AdminStore {
                 setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':) Two') }, 8000)
                 setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':D One') }, 9000)
                 setTimeout(function () {
-                  obs.send('StartStreaming')
+                  obs.call('StartStreaming')
                     .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream restarted'))
                     .catch(e => {
                       logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, 2)}`)

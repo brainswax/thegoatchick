@@ -85,57 +85,48 @@ class ScenesRenderer {
     this.logger = options.logger
   }
 
-  async getSceneItemProperties (sceneName, sourceName) {
-    const sceneItem = { item: sourceName }
-    sceneItem['scene-name'] = sceneName
-    return this.obs.send('GetSceneItemProperties', sceneItem)
+  async getSceneItemList (sceneName) {
+    return this.obs.call('GetSceneItemList', { sceneName: sceneName })
   }
 
-  async getSceneSource (sceneName, sourceData) {
-    return this.getSceneItemProperties(sceneName, sourceData.name)
-      .catch(e => this.logger.error(`Error getting scene properties for scene: ${sceneName}, source: ${sourceData.name}: ${JSON.stringify(e)}`))
-      .then(source => {
-        source.kind = sourceData.type
-        return source
+  async getSceneSources (sceneName) {
+    const sources = {}
+    return this.getSceneItemList(sceneName)
+      .then(sourceList => {
+        sourceList.sceneItems.forEach(source => {
+          sources[source.sourceName] = source
+        })
+
+        return sources
       })
   }
 
-  async getSceneSources (sceneData) {
-    const sources = {}
-    return Promise.all(sceneData.sources.map(async sourceData => {
-      return this.getSceneSource(sceneData.name, sourceData)
-        .then(source => {
-          sources[source.name] = source
-        })
-    }))
-      .then(() => sources)
-  }
-
-  async getScene (sceneData) {
+  async getScene (sceneName) {
     const scene = {
-      name: sceneData.name,
+      sceneName: sceneName,
       changedCams: new Set(),
       changedWindows: new Set()
     }
 
-    return this.getSceneSources(sceneData)
+    return this.getSceneSources(sceneName)
       .then(sources => {
         scene.sources = sources
         scene.sourceAliases = getSourceAliases(sources)
+        return scene
       })
-      .then(() => scene)
   }
 
   async getScenes (scenesData, windowKinds) {
     const scenes = {}
     return Promise.all(scenesData.map(async sceneData => {
-      return this.getScene(sceneData)
+      return this.getScene(sceneData.sceneName)
         .then(scene => {
+          scene.sceneIndex = sceneData.sceneIndex
           scene.windows = getSceneWindows(scene, windowKinds)
           scene.windows.sort((a, b) => sortWindows(a, b)) // Sort the windows for cam0, cam1, etc.
           scene.cams = getSceneCams(scene.windows) // Depends on the order of the windows
           scene.windows.forEach(window => { if (window.source) delete window.source }) // Don't need this now that we have sorted the windows
-          scenes[scene.name] = scene
+          scenes[scene.sceneName] = scene
         })
     }))
       .then(() => scenes)
@@ -293,7 +284,7 @@ export default class OBSView {
   async setSceneItemRender (sourceName, sceneName, render = false) {
     const item = { source: sourceName, render: render }
     item['scene-name'] = sceneName
-    return this.obs.send('SetSceneItemRender', item)
+    return this.obs.call('SetSceneItemRender', item)
       .catch(e => { this.logger.warn(`Unable to ${render ? 'show' : 'hide'} source '${sourceName}' in scene '${sceneName}': ${e.error}`) })
   }
 
@@ -639,7 +630,7 @@ export default class OBSView {
     if (sceneName) {
       const s = {}
       s['scene-name'] = sceneName
-      return this.obs.send('SetCurrentScene', s)
+      return this.obs.call('SetCurrentScene', s)
         .catch(e => { this.logger.error(`OBS error switching scenes: ${JSON.stringify(e, null, 2)}`) })
     }
   }
@@ -670,7 +661,7 @@ export default class OBSView {
     const sceneItem = { item: sourceName }
     sceneItem['scene-name'] = sceneName
 
-    return this.obs.send('GetSceneItemProperties', sceneItem) // Get the source info from obs
+    return this.obs.call('GetSceneItemProperties', sceneItem) // Get the source info from obs
       .then(source => { // Add the source to the scene
         this.scenes[sceneName].sources[source.name] = source
         this.scenes[sceneName].sources[source.name].kind = kind
@@ -796,9 +787,9 @@ export default class OBSView {
    */
   async syncFromObs () {
     // Grab all the scenes from OBS
-    return this.obs.send('GetSceneList')
+    return this.obs.call('GetSceneList')
       .then(async data => {
-        this.currentScene = data['current-scene']
+        this.currentScene = data.currentProgramSceneName
         this.logger.info(`Current OBS scene: '${this.currentScene}'`)
         return this.scenesRenderer.getScenes(data.scenes, this.windowKinds)
           .then(scenes => {
@@ -830,7 +821,7 @@ export default class OBSView {
       let i = 0
       Promise.all(windows.map(async window => {
         if (this.scenes[sceneName].changedCams.has(window.item) || this.scenes[sceneName].changedWindows.has(i++)) {
-          return this.obs.send('SetSceneItemProperties', window)
+          return this.obs.call('SetSceneItemProperties', window)
             .catch(err => { this.logger.warn(`Unable to set OBS properties '${window.item}' for scene '${sceneName}': ${JSON.stringify(err)}`) })
             .then(() => {
               this.scenes[sceneName].changedCams.delete(window.item)
@@ -844,7 +835,7 @@ export default class OBSView {
             if (!this.scenes[sceneName].cams.includes(cam)) {
               const view = { source: cam, render: false }
               view['scene-name'] = sceneName
-              this.obs.send('SetSceneItemRender', view)
+              this.obs.call('SetSceneItemRender', view)
                 .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${sceneName}': ${err.error}`) })
                 .then(() => {
                   this.scenes[sceneName].changedCams.delete(cam)
