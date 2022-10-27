@@ -623,9 +623,7 @@ export default class OBSView {
   setCurrentScene (sceneAlias) {
     const sceneName = this.sceneAliases[sceneAlias]
     if (sceneName) {
-      const s = {}
-      s['scene-name'] = sceneName
-      return this.obs.call('SetCurrentScene', s)
+      return this.obs.call('SetCurrentProgramScene', { sceneName: sceneName })
         .catch(e => { this.logger.error(`OBS error switching scenes: ${JSON.stringify(e, null, 2)}`) })
     }
   }
