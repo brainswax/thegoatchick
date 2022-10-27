@@ -207,7 +207,7 @@ class AdminStore {
       logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
         connectOBS(obs)
-          .then(() => obs.call('GetVideoInfo'))
+          .then(() => obs.call('GetVideoSettings'))
           .then((info) => {
             // Need the info to get the stream resolution
             app.stream.info = info
@@ -462,7 +462,7 @@ class AdminStore {
           break
         case '!stop':
           if (isModerator(context)) {
-            obs.call('StopStreaming')
+            obs.call('StopStream')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped'))
               .catch(e => {
                 logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, 2)}`)
@@ -472,7 +472,7 @@ class AdminStore {
           break
         case '!start':
           if (isModerator(context)) {
-            obs.call('StartStreaming')
+            obs.call('StartStream')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream started'))
               .catch(e => {
                 logger.error(`Unable to start OBS: ${JSON.stringify(e, null, 2)}`)
@@ -482,16 +482,11 @@ class AdminStore {
           break
         case '!restart':
           if (isModerator(context)) {
-            obs.call('StopStreaming')
+            obs.call('StopStream')
               .then(() => {
-                chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped. Starting in...')
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':Z Five') }, 5000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':\\ Four') }, 6000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ';p Three') }, 7000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':) Two') }, 8000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':D One') }, 9000)
+                chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped. Restarting in 10 seconds...')
                 setTimeout(function () {
-                  obs.call('StartStreaming')
+                  obs.call('StartStream')
                     .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream restarted'))
                     .catch(e => {
                       logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, 2)}`)
