@@ -1,7 +1,7 @@
 import { Stojo } from '@codegrill/stojo'
 
 function sortWindows (a, b) {
-  const fudge = process.env.CAM_FUDGE ? +(process.env.CAM_FUDGE) : 0.8
+  const fudge = process.env.CAM_FUDGE ? + (process.env.CAM_FUDGE) : 0.8
   if (a.width * a.height * fudge > b.width * b.height) return -1 // Window 'a' is bigger
   else if (a.width * a.height < b.width * b.height * fudge) return 1 // Window 'b' is bigger
   else { // The windows are the same size, sort by distance from the origin
@@ -46,8 +46,8 @@ function getSceneWindows (scene, windowKinds) {
         sourceName: source.sourceName,
         x: source.sceneItemTransform.positionX,
         y: source.sceneItemTransform.positionY,
-        width: source.sceneItemTransform.sourceWidth,
-        height: source.sceneItemTransform.sourceHeight
+        width: source.sceneItemTransform.width,
+        height: source.sceneItemTransform.height
       })
     }
   }
@@ -55,7 +55,7 @@ function getSceneWindows (scene, windowKinds) {
   return windows
 }
 
-function getWindows (scene) {
+function getWindowsFromScene (scene) {
   const windows = []
 
   if (scene && scene.windows) {
@@ -63,15 +63,16 @@ function getWindows (scene) {
     scene.windows.forEach(window => {
       if (scene.cams && scene.cams.length > i) {
         const sourceName = scene.cams[i++]
+        const sceneItemId = scene.sources[sourceName].sceneItemId
         windows.push({
-          item: sourceName,
-          position: window.position,
-          scale: {
-            filter: scene.sources[sourceName].scale.filter || 'OBS_SCALE_DISABLE',
-            x: window.width / scene.sources[sourceName].sourceWidth,
-            y: window.height / scene.sources[sourceName].sourceHeight
-          },
-          visible: true
+          sceneName: scene.sceneName,
+          sceneItemId: sceneItemId,
+          sceneItemTransform: {
+            positionX: window.x,
+            positionY: window.y,
+            width: window.width,
+            height: window.height
+          }
         })
       }
     })
@@ -781,6 +782,17 @@ export default class OBSView {
       })
       .catch(e => { this.logger.error(`Error updated scene change: ${JSON.stringify(e)}`) })
   }
+
+  getSourceNameFromSceneItemId(sceneName, sceneId) {
+    for (const [sourceName, source] of Object.entries(this.scenes[sceneName].sources)) {
+      if (source.sceneItemId === sceneId) {
+        return sourceName
+      }
+    }
+
+    return ""
+  }
+
   /// //////////////////////////////////////////////////////////////////////////
 
   /**
@@ -809,7 +821,7 @@ export default class OBSView {
   updateOBS (sceneName) {
     sceneName = sceneName || this.currentScene
     if (sceneName) {
-      const windows = getWindows(this.scenes[sceneName])
+      const windows = getWindowsFromScene(this.scenes[sceneName])
 
       if (this.scenes[sceneName].changedCams.size > 0) {
         this.logger.info(`Changed cams: ${Array.from(this.scenes[sceneName].changedCams).join(', ')}`)
@@ -821,11 +833,35 @@ export default class OBSView {
 
       let i = 0
       Promise.all(windows.map(async window => {
-        if (this.scenes[sceneName].changedCams.has(window.item) || this.scenes[sceneName].changedWindows.has(i++)) {
-          return this.obs.call('SetSceneItemProperties', window)
-            .catch(err => { this.logger.warn(`Unable to set OBS properties '${window.item}' for scene '${sceneName}': ${JSON.stringify(err)}`) })
+        const sourceName = this.getSourceNameFromSceneItemId(sceneName, window.sceneItemId)
+        if (this.scenes[sceneName].changedCams.has(sourceName) || this.scenes[sceneName].changedWindows.has(i++)) {
+          let itemEnabled = {
+            sceneName: window.sceneName,
+            sceneItemId: window.sceneItemId,
+            sceneItemEnabled: true
+          }
+          return this.obs.call('SetSceneItemEnabled', itemEnabled)
+            .catch(err => {
+              this.logger.warn(`Unable to show '${sourceName}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+            })
             .then(() => {
-              this.scenes[sceneName].changedCams.delete(window.item)
+              return this.obs.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: window.sceneItemId })
+            })
+            .catch(err => {
+              this.logger.warn(`Unable to get the source dimensions to move '${sourceName}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+            })
+            .then(sourceData => {
+              window.sceneItemTransform.scaleX = window.sceneItemTransform.width / sourceData.sceneItemTransform.sourceWidth
+              window.sceneItemTransform.scaleY = window.sceneItemTransform.height / sourceData.sceneItemTransform.sourceHeight
+            })
+            .then(() => {
+              return this.obs.call('SetSceneItemTransform', window)
+            })
+            .catch(err => {
+              this.logger.warn(`Unable to update '${window.item}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+            })
+            .then(() => {
+              this.scenes[sceneName].changedCams.delete(sourceName)
               this.scenes[sceneName].changedWindows.delete(i - 1)
             })
         }
@@ -834,17 +870,24 @@ export default class OBSView {
         // Anything left needs to be hidden
           this.scenes[sceneName].changedCams.forEach(cam => {
             if (!this.scenes[sceneName].cams.includes(cam)) {
-              const view = { source: cam, render: false }
-              view['scene-name'] = sceneName
-              this.obs.call('SetSceneItemRender', view)
-                .catch(err => { this.logger.warn(`Unable to hide OBS view '${cam}' for scene '${sceneName}': ${err.error}`) })
+              const itemDisabled = {
+                sceneName: sceneName,
+                sceneItemId: this.scenes[sceneName].sources[cam].sceneItemId,
+                sceneItemEnabled: false
+              }
+              this.obs.call('SetSceneItemEnabled', itemDisabled)
+                .catch(err => {
+                  this.logger.warn(`Unable to hide '${cam}' for scene '${sceneName}': ${err.error}`)
+                })
                 .then(() => {
                   this.scenes[sceneName].changedCams.delete(cam)
                 })
             }
           })
         })
-        .catch(e => { this.logger.error(`Error updating obs scene windows: ${JSON.stringify(e)}`) })
+        .catch(e => {
+          this.logger.error(`Error updating obs scene windows: ${JSON.stringify(e)}`)
+        })
 
       this.storedWindows = windows
     }
