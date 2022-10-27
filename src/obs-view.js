@@ -220,18 +220,26 @@ export default class OBSView {
     }
   }
 
-  async handleShowSource (chat, channel, alias, value) {
-    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    return (sourceName && value === 'false')
-      ? this.hideSource(sourceName, this.currentScene)
-      : this.showSource(sourceName, this.currentScene)
+  async setSceneItemEnabled (sceneName, sceneItemId, enabled = true) {
+    const item = {
+      sceneName: sceneName,
+      sceneItemId: sceneItemId,
+      sceneItemEnabled: enabled
+    }
+    return this.obs.call('SetSceneItemEnabled', item)
+      .catch(e => { this.logger.warn(`Unable to ${enabled ? 'show' : 'hide'} source '${sourceName}' in scene '${sceneItemId}': ${e.error}`) })
   }
 
-  async handleHideSource (chat, channel, alias, value) {
+  async handleShowSource (chat, channel, alias, show) {
     const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    return (sourceName && value === 'false')
-      ? this.showSource(sourceName, this.currentScene)
-      : this.hideSource(sourceName, this.currentScene)
+    const id = this.scenes[this.currentScene].sources[sourceName].sceneItemId
+    return this.setSceneItemEnabled(this.currentScene, id, show !== 'false')
+  }
+
+  async handleHideSource (chat, channel, alias, hide) {
+    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
+    const id = this.scenes[this.currentScene].sources[sourceName].sceneItemId
+    return this.setSceneItemEnabled(this.currentScene, id, hide === 'false')
   }
 
   async handleResetSource (chat, channel, alias, value) {
@@ -256,14 +264,6 @@ export default class OBSView {
       : this.unmuteSource(sourceName, this.currentScene)
   }
 
-  async hideSource (sourceName, sceneName) {
-    return this.setSceneItemRender(sourceName, sceneName, false)
-  }
-
-  async showSource (sourceName, sceneName) {
-    return this.setSceneItemRender(sourceName, sceneName, true)
-  }
-
   async muteSource (sourceName, sceneName) {
     // TODO
   }
@@ -281,13 +281,6 @@ export default class OBSView {
         delay || process.env.RESET_SOURCE_DELAY || 3000)
       })
       .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) })
-  }
-
-  async setSceneItemRender (sourceName, sceneName, render = false) {
-    const item = { source: sourceName, render: render }
-    item['scene-name'] = sceneName
-    return this.obs.call('SetSceneItemRender', item)
-      .catch(e => { this.logger.warn(`Unable to ${render ? 'show' : 'hide'} source '${sourceName}' in scene '${sceneName}': ${e.error}`) })
   }
 
   commandWindows (chat, channel, message) {
