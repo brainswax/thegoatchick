@@ -332,6 +332,11 @@ export default class OBSView {
     }
   }
 
+  getSourceById (sourceId, sceneName) {
+    sceneName = sceneName || this.currentScene
+
+  }
+
   getSourceByName (sourceName, sceneName) {
     sceneName = sceneName || this.currentScene
     if (this.scenes[sceneName]) {
@@ -688,11 +693,11 @@ export default class OBSView {
     this.logger.debug(`Event OBS:SourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
   }
 
-  sceneItemVisibilityChanged (data) {
+  sceneItemEnableStateChanged (data) {
     const source = this.getSourceByName(data.itemName, data.sceneName)
     source.visible = data.itemVisible
     this.logger.info(`${data.itemVisible ? 'Show' : 'Hide'} source '${data.itemName}' in scene '${data.sceneName}'`)
-    this.logger.debug(`Event OBS:SceneItemVisibilityChanged: ${JSON.stringify(data, null, 2)}`)
+    this.logger.debug(`Event OBS:SceneItemEnableStateChanged: ${JSON.stringify(data, null, 2)}`)
   }
 
   sceneItemTransformChanged (data) {
