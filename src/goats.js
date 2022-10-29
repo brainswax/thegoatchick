@@ -208,7 +208,7 @@ class AdminStore {
         logger.debug(`Video Info: ${JSON.stringify(info, null, 2)}`)
         return info
       })
-}
+  }
 
   function reconnectOBS () {
     // If the connection closes, retry after the timeout period
