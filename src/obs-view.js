@@ -1,7 +1,7 @@
 import { Stojo } from '@codegrill/stojo'
 
 function sortWindows (a, b) {
-  const fudge = process.env.CAM_FUDGE ? + (process.env.CAM_FUDGE) : 0.8
+  const fudge = process.env.CAM_FUDGE ? +(process.env.CAM_FUDGE) : 0.8
   if (a.width * a.height * fudge > b.width * b.height) return -1 // Window 'a' is bigger
   else if (a.width * a.height < b.width * b.height * fudge) return 1 // Window 'b' is bigger
   else { // The windows are the same size, sort by distance from the origin
@@ -26,7 +26,7 @@ function getSceneAliases (scenes) {
 
 function getSourceAliases (sources) {
   const sourceAliases = {} // Needs to be an Object, not Map, in order to persist it in the object store
-  for (const sourceId in sources) sourceAliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceId
+  for (const sourceId in sources) sourceAliases[sources[sourceId].sourceName.toLowerCase().replace(/\W/g, '-')] = sourceId
   return sourceAliases
 }
 
@@ -227,7 +227,9 @@ export default class OBSView {
       sceneItemEnabled: enabled
     }
     return this.obs.call('SetSceneItemEnabled', item)
-      .catch(e => { this.logger.warn(`Unable to ${enabled ? 'show' : 'hide'} source '${sourceName}' in scene '${sceneItemId}': ${e.error}`) })
+      .catch(e => {
+        this.logger.warn(`Unable to ${enabled ? 'show' : 'hide'} source '${this.getNameBySourceId(sceneItemId, sceneName)}' in scene '${sceneItemId}': ${e.error}`)
+      })
   }
 
   async handleShowSource (chat, channel, alias, show) {
@@ -334,21 +336,9 @@ export default class OBSView {
     }
   }
 
-  getSourceNameById (sourceId, sceneName) {
+  getSourceById (sourceId, sceneName) {
     sceneName = sceneName || this.currentScene
-
-  }
-
-  getSourceByName (sourceName, sceneName) {
-    sceneName = sceneName || this.currentScene
-    if (this.scenes[sceneName]) {
-      return this.scenes[sceneName].sources[sourceName]
-    }
-  }
-
-  getSourceIdByAlias (sourceAlias, sceneName) {
-    sceneName = sceneName || this.currentScene
-
+    return this.scenes[sceneName] && this.scenes[sceneName].sources[sourceId]
   }
 
   getSourceIdByAlias (sourceAlias, sceneName) {
@@ -403,7 +393,7 @@ export default class OBSView {
         if (camId in this.scenes[this.currentScene].sourceAliases) { // Only add a commmand if there are aliases for the camera name
           const camIndex = i === 0 ? 0 : parseInt(word.slice(0, i)) // Assume 0 unless it starts with a number
           if (camIndex < this.scenes[this.currentScene].cams.length) { // Only add it if there's a camera window available
-            commands[n++] = { index: camIndex, name: camName, id: camId } // Add the command to the array
+            commands[n++] = { index: camIndex, id: camId } // Add the command to the array
           }
         }
       })
@@ -418,7 +408,7 @@ export default class OBSView {
   */
   processChat (msg) {
     if (this.currentScene && this.scenes[this.currentScene]) {
-      this.parseChatCommands(msg).forEach(c => { this.setWindow(c.index, c.name) })
+      this.parseChatCommands(msg).forEach(c => { this.setWindow(c.index, c.id) })
       this.updateOBS(this.currentScene)
     } else {
       this.logger.warn('Chat command cannot be processed because OBS has not been loaded yet')
@@ -434,19 +424,19 @@ export default class OBSView {
     return this.currentScene && this.scenes[this.currentScene] && cam in this.scenes[this.currentScene].cams
   }
 
-  setWindow (index, name) {
+  setWindow (index, camId) {
     if (this.currentScene && this.scenes[this.currentScene]) {
       let currentIndex = -1
-      this.logger.info(`Setting cam${index} to '${name}' for scene '${this.currentScene}'`)
+      this.logger.info(`Setting cam${index} to '${camId}' for scene '${this.currentScene}'`)
 
       try {
         // get index of where the specified source is currently
         for (let x = 0; x < this.scenes[this.currentScene].cams.length; x++) {
-          if (this.scenes[this.currentScene].cams[x] === name) currentIndex = x
+          if (this.scenes[this.currentScene].cams[x] === camId) currentIndex = x
         }
 
         if (index !== currentIndex) { // It's either not in a window or we're moving it to a different one
-          this.scenes[this.currentScene].changedCams.add(name)
+          this.scenes[this.currentScene].changedCams.add(camId)
           if (currentIndex > -1) { // It's already displayed in a window
             // Set the current window to whatever it's replacing
             const swap = this.scenes[this.currentScene].cams[index]
@@ -458,7 +448,7 @@ export default class OBSView {
             this.logger.info(`Source '${this.scenes[this.currentScene].cams[index]}' moved out of scene '${this.currentScene}'`)
           }
 
-          this.scenes[this.currentScene].cams[index] = name
+          this.scenes[this.currentScene].cams[index] = camId
         }
       } catch (e) { this.logger.error(`Error setting window: ${JSON.stringify(e)}`) }
     }
@@ -554,10 +544,10 @@ export default class OBSView {
     }
   }
 
-  renameCams (oldName, newName, sceneName) {
+  renameCams (oldId, newId, sceneName) {
     if (sceneName && sceneName in this.scenes) {
       for (let i = 0; i < this.scenes[sceneName].cams.length; i++) {
-        if (this.scenes[sceneName].cams[i] === oldName) this.scenes[sceneName].cams[i] = newName
+        if (this.scenes[sceneName].cams[i] === oldId) this.scenes[sceneName].cams[i] = newId
       }
     }
   }
@@ -785,14 +775,14 @@ export default class OBSView {
       .catch(e => { this.logger.error(`Error updated scene change: ${JSON.stringify(e)}`) })
   }
 
-  getSourceNameFromSceneItemId(sceneName, sceneId) {
+  getSourceNameFromSceneItemId (sceneName, sceneId) {
     for (const [sourceName, source] of Object.entries(this.scenes[sceneName].sources)) {
       if (source.sceneItemId === sceneId) {
         return sourceName
       }
     }
 
-    return ""
+    return ''
   }
 
   /// //////////////////////////////////////////////////////////////////////////
@@ -837,7 +827,7 @@ export default class OBSView {
       Promise.all(windows.map(async window => {
         const sourceName = this.getSourceNameFromSceneItemId(sceneName, window.sceneItemId)
         if (this.scenes[sceneName].changedCams.has(sourceName) || this.scenes[sceneName].changedWindows.has(i++)) {
-          let itemEnabled = {
+          const itemEnabled = {
             sceneName: window.sceneName,
             sceneItemId: window.sceneItemId,
             sceneItemEnabled: true
@@ -874,7 +864,7 @@ export default class OBSView {
             if (!this.scenes[sceneName].cams.includes(cam)) {
               const itemDisabled = {
                 sceneName: sceneName,
-                sceneItemId: this.scenes[sceneName].sources[cam].sceneItemId,
+                sceneItemId: cam,
                 sceneItemEnabled: false
               }
               this.obs.call('SetSceneItemEnabled', itemDisabled)
