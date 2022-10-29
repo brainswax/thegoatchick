@@ -196,9 +196,19 @@ class AdminStore {
       .then(() => {
         app.obs.retries = 0 // Reset for the next disconnect
         logger.info('== connected to OBS')
+
+        return obsView.syncFromObs()
       })
-      .then(() => obsView.syncFromObs())
-  }
+      .then(() => {
+        return obs.call('GetVideoSettings')
+      })
+      .then(info => {
+        // Need the info to get the stream resolution
+        logger.info(`Stream Base Resolution: ${info.baseWidth}x${info.baseHeight}, Output Resolution: ${info.outputWidth}x${info.outputHeight}`)
+        logger.debug(`Video Info: ${JSON.stringify(info, null, 2)}`)
+        return info
+      })
+}
 
   function reconnectOBS () {
     // If the connection closes, retry after the timeout period
@@ -206,15 +216,10 @@ class AdminStore {
       const delay = Math.round((process.env.OBS_RETRY_DELAY || 3000) * ((process.env.OBS_RETRY_DECAY || 1.2) ** app.obs.retries++))
       logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
-        connectOBS(obs)
-          .then(() => obs.call('GetVideoSettings'))
-          .then((info) => {
-            // Need the info to get the stream resolution
-            app.stream.info = info
-            logger.info(`Stream Base Resolution: ${app.stream.info.baseWidth}x${app.stream.info.baseHeight}, Output Resolution: ${app.stream.info.outputWidth}x${app.stream.info.outputHeight}`)
-            logger.debug(`Video Info: ${JSON.stringify(info, null, 2)}`)
+        app.stream.info = connectOBS(obs)
+          .catch(e => {
+            logger.error(`Connection retry to OBS failed: ${e.message}`)
           })
-          .catch(e => logger.error(`Connect OBS retry failed: ${e.error}`))
       }, delay)
     }
   }
@@ -238,9 +243,9 @@ class AdminStore {
   obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
-  connectOBS(obs)
+  app.stream.info = connectOBS(obs)
     .catch(e => {
-      logger.error(`Connect OBS failed: ${e.error}`)
+      logger.error(`Connect OBS failed: ${e.message}`)
     })
 
   // ///////////////////////////////////////////////////////////////////////////

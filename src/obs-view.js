@@ -802,7 +802,7 @@ export default class OBSView {
 
             this.logger.info(`Synced scenes from OBS: '${Object.keys(this.scenes).join('\', \'')}'`)
           })
-          .catch(e => { this.logger.error(`Error syncing from OBS: ${JSON.stringify(e)}`) })
+          .catch(e => { this.logger.error(`Error syncing scenes from OBS: ${e.message}`) })
       })
   }
 
