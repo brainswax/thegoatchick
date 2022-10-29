@@ -26,7 +26,7 @@ function getSceneAliases (scenes) {
 
 function getSourceAliases (sources) {
   const sourceAliases = {} // Needs to be an Object, not Map, in order to persist it in the object store
-  for (const sourceName in sources) sourceAliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceName
+  for (const sourceId in sources) sourceAliases[sourceName.toLowerCase().replace(/\W/g, '-')] = sourceId
   return sourceAliases
 }
 
@@ -62,8 +62,8 @@ function getWindowsFromScene (scene) {
     let i = 0
     scene.windows.forEach(window => {
       if (scene.cams && scene.cams.length > i) {
-        const sourceName = scene.cams[i++]
-        const sceneItemId = scene.sources[sourceName].sceneItemId
+        const sceneItemId = scene.cams[i++]
+
         windows.push({
           sceneName: scene.sceneName,
           sceneItemId: sceneItemId,
@@ -96,7 +96,7 @@ class ScenesRenderer {
     return this.getSceneItemList(sceneName)
       .then(sourceList => {
         sourceList.sceneItems.forEach(source => {
-          sources[source.sourceName] = source
+          sources[source.sceneItemId] = source
         })
 
         return sources
@@ -231,15 +231,17 @@ export default class OBSView {
   }
 
   async handleShowSource (chat, channel, alias, show) {
-    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    const id = this.scenes[this.currentScene].sources[sourceName].sceneItemId
-    return this.setSceneItemEnabled(this.currentScene, id, show !== 'false')
+    return this.setSceneItemEnabled(
+      this.currentScene,
+      this.getSourceIdByAlias(alias, this.currentScene),
+      show !== 'false')
   }
 
   async handleHideSource (chat, channel, alias, hide) {
-    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    const id = this.scenes[this.currentScene].sources[sourceName].sceneItemId
-    return this.setSceneItemEnabled(this.currentScene, id, hide === 'false')
+    return this.setSceneItemEnabled(
+      this.currentScene,
+      this.getSourceIdByAlias(alias, this.currentScene),
+      hide === 'false')
   }
 
   async handleResetSource (chat, channel, alias, value) {
@@ -251,17 +253,17 @@ export default class OBSView {
   }
 
   async handleMuteSource (chat, channel, alias, value) {
-    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    return (sourceName && value === 'false')
-      ? this.unmuteSource(sourceName, this.currentScene)
-      : this.muteSource(sourceName, this.currentScene)
+    const sourceId = this.getSourceIdByAlias(alias, this.currentScene)
+    return (sourceId && value === 'false')
+      ? this.unmuteSource(sourceId, this.currentScene)
+      : this.muteSource(sourceId, this.currentScene)
   }
 
   async handleUnmuteSource (chat, channel, alias, value) {
-    const sourceName = this.getSourceNameByAlias(alias, this.currentScene)
-    return (sourceName && value === 'false')
-      ? this.muteSource(sourceName, this.currentScene)
-      : this.unmuteSource(sourceName, this.currentScene)
+    const sourceId = this.getSourceIdByAlias(alias, this.currentScene)
+    return (sourceId && value === 'false')
+      ? this.muteSource(sourceId, this.currentScene)
+      : this.unmuteSource(sourceId, this.currentScene)
   }
 
   async muteSource (sourceName, sceneName) {
@@ -291,7 +293,7 @@ export default class OBSView {
     else {
       const windows = []
       for (let i = 0; i < this.scenes[this.currentScene].windows.length; i++) {
-        windows.push(`${i}:${this.getAliasBySourceName(this.scenes[this.currentScene].cams[i])}`)
+        windows.push(`${i}:${this.scenes[this.currentScene].cams[i]}`)
       }
       chat.say(channel, `Windows: ${windows.join(', ')}`)
     }
@@ -325,14 +327,14 @@ export default class OBSView {
   getSourceByAlias (sourceAlias, sceneName) {
     sceneName = sceneName || this.currentScene
     if (this.scenes[sceneName]) {
-      const sourceName = this.scenes[sceneName].sourceAliases[sourceAlias]
-      if (sourceName) {
-        return this.scenes[sceneName].sources[sourceName]
+      const sourceId = this.scenes[sceneName].sourceAliases[sourceAlias]
+      if (sourceId) {
+        return this.scenes[sceneName].sources[sourceId]
       }
     }
   }
 
-  getSourceById (sourceId, sceneName) {
+  getSourceNameById (sourceId, sceneName) {
     sceneName = sceneName || this.currentScene
 
   }
@@ -344,19 +346,22 @@ export default class OBSView {
     }
   }
 
-  getSourceNameByAlias (sourceAlias, sceneName) {
+  getSourceIdByAlias (sourceAlias, sceneName) {
+    sceneName = sceneName || this.currentScene
+
+  }
+
+  getSourceIdByAlias (sourceAlias, sceneName) {
     sceneName = sceneName || this.currentScene
     if (this.scenes[sceneName]) {
       return this.scenes[sceneName].sourceAliases[sourceAlias]
     }
   }
 
-  getAliasBySourceName (sourceName, sceneName) {
+  getNameBySourceId (sourceId, sceneName) {
     sceneName = sceneName || this.currentScene
 
-    for (const alias in this.scenes[sceneName].sourceAliases) {
-      if (this.scenes[sceneName].sourceAliases[alias] === sourceName) return alias
-    }
+    return sourceId && this.scenes[sceneName] && this.scenes[sceneName].sources[sourceId]
   }
 
   hasSourceAlias (sourceAlias, sceneName) {
@@ -394,10 +399,11 @@ export default class OBSView {
       words.forEach(word => {
         const i = word.search(/\D/) // Find the first non-digit character
         const camName = word.slice(i) // get everything including and after the first non-digit character
-        if (camName in this.scenes[this.currentScene].sourceAliases) { // Only add a commmand if there are aliases for the camera name
+        const camId = this.getSourceIdByAlias(camName, this.currentScene)
+        if (camId in this.scenes[this.currentScene].sourceAliases) { // Only add a commmand if there are aliases for the camera name
           const camIndex = i === 0 ? 0 : parseInt(word.slice(0, i)) // Assume 0 unless it starts with a number
           if (camIndex < this.scenes[this.currentScene].cams.length) { // Only add it if there's a camera window available
-            commands[n++] = { index: camIndex, name: this.scenes[this.currentScene].sourceAliases[camName] } // Add the command to the array
+            commands[n++] = { index: camIndex, name: camName, id: camId } // Add the command to the array
           }
         }
       })
@@ -522,16 +528,16 @@ export default class OBSView {
     }
   }
 
-  addSourceAlias (sourceAlias, sourceName, sceneName) {
+  addSourceAlias (sourceAlias, sourceId, sceneName) {
     if (this.scenes[sceneName]) {
-      this.scenes[sceneName].sourceAliases[sourceAlias.toLowerCase().replace(/\W/g, '-')] = sourceName
+      this.scenes[sceneName].sourceAliases[sourceAlias.toLowerCase().replace(/\W/g, '-')] = sourceId
     }
   }
 
-  removeAliasesForSource (sourceName, sceneName) {
+  removeAliasesForSource (sourceId, sceneName) {
     if (this.scenes[sceneName]) {
-      for (const key in this.scenes[sceneName].sourceAliases) {
-        if (this.scenes[sceneName].sourceAliases[key] === sourceName) delete this.scenes[sceneName].sourceAliases[key]
+      for (const alias in this.scenes[sceneName].sourceAliases) {
+        if (this.scenes[sceneName].sourceAliases[alias] === sourceId) delete this.scenes[sceneName].sourceAliases[alias]
       }
     }
   }
