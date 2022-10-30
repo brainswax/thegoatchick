@@ -687,11 +687,6 @@ export default class OBSView {
   }
 
   // Handlers for OBS events //////////////////////////////////////////////////
-  sourceOrderChanged (data) {
-    this.logger.info(`Source order changed for scene '${data.sceneName}'`)
-    this.logger.debug(`Event OBS:SourceOrderChanged: ${JSON.stringify(data, null, 2)}`)
-  }
-
   sceneItemEnableStateChanged (data) {
     const source = this.getSourceByName(data.itemName, data.sceneName)
     source.visible = data.itemVisible
@@ -701,16 +696,16 @@ export default class OBSView {
 
   sceneItemTransformChanged (data) {
     // Update an existing source item
-    const source = data.transform
-    source.name = data['item-name']
+    // TODO: make work again
+    //const transform = data.sceneItemTransform
 
-    if (this.scenes[data['scene-name']] &&
-        (!this.scenes[data['scene-name']].sources[data['item-name']] ||
-        !this.scenes[data['scene-name']].sources[data['item-name']].kind)) { // This source already exists in at least one other scene
-      source.kind = this.getKindFromSource(data['item-name']) // Grab the kind from it so we don't have to query OBS
+    if (this.scenes[data.sceneName] &&
+        (!this.scenes[data.sceneName].sources[data.sceneItemId] ||
+        !this.scenes[data.sceneName].sources[data.sceneItemId].kind)) { // This source already exists in at least one other scene
+      source.kind = this.getKindFromSource(data.sceneItemId) // Grab the kind from it so we don't have to query OBS
     }
 
-    this.updateSourceItem(data['scene-name'], source)
+    this.updateSourceItem(data.sceneName, source)
   }
 
   switchScenes (data) {

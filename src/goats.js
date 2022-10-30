@@ -234,15 +234,17 @@ class AdminStore {
   obs.on('AuthenticationFailure', () => { logger.info('== OBS failed authentication') })
   obs.on('error', e => logger.error(`== OBS error: ${e.message}`))
 
-  // Stream events
+  // OBS events - working
   obs.on('SceneItemEnableStateChanged', data => obsView.sceneItemEnableStateChanged(data)) // hide/show source
   obs.on('SceneItemListReindexed', data => obsView.sourceOrderChanged(data))
   obs.on('CurrentProgramSceneChanged', data => obsView.switchScenes(data))
 
-  obs.on('SourceOrderChanged', data => obsView.sourceOrderChanged(data))
-
+  // OBS events not implemented in obs-websocket
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
 
+  // TODO - in progress
+
+  // TODO - backlog
   obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
   obs.on('SourceCreated', data => obsView.sourceCreated(data))
   obs.on('ScenesChanged', data => obsView.scenesChanged(data))
