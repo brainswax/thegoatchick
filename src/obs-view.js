@@ -277,10 +277,10 @@ export default class OBSView {
   }
 
   async resetSource (sceneItemId, sceneName, delay) {
+    const sourceName = this.scenes[sceneName].sources[sceneItemId].sourceName
     this.setSceneItemEnabled(sceneItemId, sceneName, false) // hide
       .then(() => {
-        const sourceName = this.scenes[sceneName].sources[sceneItemId].sourceName
-        setTimeout(() => this.setSceneItemEnabled(sceneItemId, sceneName, true) //show
+        setTimeout(() => this.setSceneItemEnabled(sceneItemId, sceneName, true) // show
           .then(() => { this.logger.info(`Reset source '${sourceName}' in scene '${sceneName}'`) })
           .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${e.message}`) }),
         delay || process.env.RESET_SOURCE_DELAY || 3000)
