@@ -220,7 +220,7 @@ export default class OBSView {
     }
   }
 
-  async setSceneItemEnabled (sceneName, sceneItemId, enabled = true) {
+  async setSceneItemEnabled (sceneItemId, sceneName, enabled = true) {
     const item = {
       sceneName: sceneName,
       sceneItemId: sceneItemId,
@@ -234,23 +234,23 @@ export default class OBSView {
 
   async handleShowSource (chat, channel, alias, show) {
     return this.setSceneItemEnabled(
-      this.currentScene,
       this.getSourceIdByAlias(alias, this.currentScene),
+      this.currentScene,
       show !== 'false')
   }
 
   async handleHideSource (chat, channel, alias, hide) {
     return this.setSceneItemEnabled(
-      this.currentScene,
       this.getSourceIdByAlias(alias, this.currentScene),
+      this.currentScene,
       hide === 'false')
   }
 
   async handleResetSource (chat, channel, alias, value) {
-    const source = this.getSourceByAlias(alias, this.currentScene)
+    const sceneItemId = this.getSourceIdByAlias(alias)
 
-    if (source.visible) {
-      return this.resetSource(source.name, this.currentScene, value && parseInt(parseFloat(value) * 1000))
+    if (this.scenes[this.currentScene].sources[sceneItemId].sceneItemEnabled) {
+      return this.resetSource(sceneItemId, this.currentScene, value && parseInt(parseFloat(value) * 1000))
     }
   }
 
@@ -268,23 +268,24 @@ export default class OBSView {
       : this.unmuteSource(sceneItemId, this.currentScene)
   }
 
-  async muteSource (sourceName, sceneName) {
+  async muteSource (sourceId, sceneName) {
     // TODO
   }
 
-  async unmuteSource (sourceName, sceneName) {
+  async unmuteSource (sourceId, sceneName) {
     // TODO
   }
 
-  async resetSource (sourceName, sceneName, delay) {
-    this.hideSource(sourceName, sceneName)
+  async resetSource (sceneItemId, sceneName, delay) {
+    this.setSceneItemEnabled(sceneItemId, sceneName, false) // hide
       .then(() => {
-        setTimeout(() => this.showSource(sourceName, sceneName)
+        const sourceName = this.scenes[sceneName].sources[sceneItemId].sourceName
+        setTimeout(() => this.setSceneItemEnabled(sceneItemId, sceneName, true) //show
           .then(() => { this.logger.info(`Reset source '${sourceName}' in scene '${sceneName}'`) })
-          .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) }),
+          .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${e.message}`) }),
         delay || process.env.RESET_SOURCE_DELAY || 3000)
       })
-      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${JSON.stringify(e)}`) })
+      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${e.message}`) })
   }
 
   commandWindows (chat, channel, message) {
@@ -777,7 +778,7 @@ export default class OBSView {
               return this.obs.call('SetSceneItemTransform', window)
             })
             .catch(err => {
-              this.logger.warn(`Unable to update '${window.item}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+              this.logger.warn(`Unable to update '${this.getNameBySourceId(window.sceneItemId, window.sceneName)}' for scene '${sceneName}': ${JSON.stringify(err)}`)
             })
             .then(() => {
               this.scenes[sceneName].changedCams.delete(window.sceneItemId)
