@@ -289,7 +289,8 @@ export default class OBSView {
     else {
       const windows = []
       for (let i = 0; i < this.scenes[this.currentScene].windows.length; i++) {
-        windows.push(`${i}:${this.scenes[this.currentScene].cams[i]}`)
+        const sceneItemId = this.scenes[this.currentScene].cams[i]
+        windows.push(`${i}:${this.scenes[this.currentScene].sources[sceneItemId].sourceName}`)
       }
       chat.say(channel, `Windows: ${windows.join(', ')}`)
     }
