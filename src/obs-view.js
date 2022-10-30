@@ -261,7 +261,7 @@ export default class OBSView {
 
   async handleUnmuteSource (chat, channel, alias, value) {
     const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
-    return sceneItemId && this.muteSource(sceneItemId. this.currentScene, value === 'false')
+    return sceneItemId && this.muteSource(sceneItemId, this.currentScene, value === 'false')
   }
 
   async muteSource (sceneItemId, sceneName, mute) {
