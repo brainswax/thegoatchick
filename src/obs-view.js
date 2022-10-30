@@ -464,32 +464,32 @@ export default class OBSView {
 
   getWindowX (index, scene) {
     const sceneName = scene || this.currentScene
-    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].position.x
+    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].x
   }
 
   setWindowX (index, value, scene) {
     const sceneName = scene || this.currentScene
     if (this.scenes[sceneName].windows.length > index) {
-      const old = this.scenes[sceneName].windows[index].position.x
+      const old = this.scenes[sceneName].windows[index].x
       if (value !== old) {
         this.scenes[sceneName].changedWindows.add(index)
-        this.scenes[sceneName].windows[index].position.x = value
+        this.scenes[sceneName].windows[index].x = value
       }
     }
   }
 
   getWindowY (index, scene) {
     const sceneName = scene || this.currentScene
-    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].position.y
+    if (this.scenes[sceneName].windows.length > index) return this.scenes[sceneName].windows[index].y
   }
 
   setWindowY (index, value, scene) {
     const sceneName = scene || this.currentScene
     if (this.scenes[sceneName].windows.length > index) {
-      const old = this.scenes[sceneName].windows[index].position.y
+      const old = this.scenes[sceneName].windows[index].y
       if (value !== old) {
         this.scenes[sceneName].changedWindows.add(index)
-        this.scenes[sceneName].windows[index].position.y = value
+        this.scenes[sceneName].windows[index].y = value
       }
     }
   }
@@ -559,8 +559,8 @@ export default class OBSView {
     const source = this.scenes[sceneName].sources[sceneItemId]
     for (let i = 0; i < cams.length; i++) {
       if (cams[i] === sceneItemId) { // Found the source in current visible cams
-        windows[i].position.x = source.position.x
-        windows[i].position.y = source.position.y
+        windows[i].x = source.x
+        windows[i].y = source.y
         if (source.width > 0) windows[i].width = source.width // Bug #84: don't set windows to width 0
         if (source.height > 0) windows[i].height = source.height // Bug #84: don't set windows to height 0
         break
