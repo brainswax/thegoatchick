@@ -243,13 +243,13 @@ class AdminStore {
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
 
   // TODO - in progress
+  obs.on('SceneItemCreated', data => obsView.sceneItemCreated(data))
+  obs.on('SceneItemRemoved', data => obsView.sceneItemRemoved(data))
 
   // TODO - backlog
   obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
-  obs.on('SourceCreated', data => obsView.sourceCreated(data))
   obs.on('ScenesChanged', data => obsView.scenesChanged(data))
   obs.on('SourceDestroyed', data => obsView.sourceDestroyed(data))
-  obs.on('SceneItemRemoved', data => obsView.sourceItemRemoved(data))
 
   // Connect to OBS
   app.stream.info = connectOBS(obs)
