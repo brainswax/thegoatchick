@@ -70,9 +70,8 @@ function getWindowsFromScene (scene) {
           sceneItemTransform: {
             positionX: window.x,
             positionY: window.y,
-            boundsType: 'OBS_BOUNDS_STRETCH',
-            boundsWidth: window.width,
-            boundsHeight: window.height
+            width: window.width,
+            height: window.height
           }
         })
       }
