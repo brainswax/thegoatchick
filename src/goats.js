@@ -237,11 +237,11 @@ class AdminStore {
   // Stream events
   obs.on('SceneItemEnableStateChanged', data => obsView.sceneItemEnableStateChanged(data)) // hide/show source
   obs.on('SceneItemListReindexed', data => obsView.sourceOrderChanged(data))
+  obs.on('CurrentProgramSceneChanged', data => obsView.switchScenes(data))
 
   obs.on('SourceOrderChanged', data => obsView.sourceOrderChanged(data))
 
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
-  obs.on('SwitchScenes', data => obsView.switchScenes(data))
 
   obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
   obs.on('SourceCreated', data => obsView.sourceCreated(data))

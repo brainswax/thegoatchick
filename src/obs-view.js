@@ -715,8 +715,9 @@ export default class OBSView {
 
   switchScenes (data) {
     if (this.currentScene !== data.sceneName) {
-      this.logger.info(`Switched scene from '${this.currentScene}' to '${data.sceneName}'`)
+      const oldScene = this.currentScene
       this.currentScene = data.sceneName
+      this.logger.info(`Switched scene from '${oldScene}' to '${this.currentScene}'`)
     }
   }
 
