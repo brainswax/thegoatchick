@@ -70,8 +70,9 @@ function getWindowsFromScene (scene) {
           sceneItemTransform: {
             positionX: window.x,
             positionY: window.y,
-            width: window.width,
-            height: window.height
+            boundsType: 'OBS_BOUNDS_STRETCH',
+            boundsWidth: window.width,
+            boundsHeight: window.height
           }
         })
       }
@@ -214,7 +215,7 @@ export default class OBSView {
   async handleShowInfo (chat, channel, alias, value) {
     const source = this.getSourceByAlias(alias)
     if (source) {
-      chat.say(channel, `${alias} source w:${source.sourceWidth} h:${source.sourceHeight}`)
+      chat.say(channel, `${alias} source w:${source.sceneItemTransform.sourceWidth} h:${source.sceneItemTransform.sourceHeight}`)
     } else {
       this.logger.info(`No source info for '${alias}'`)
     }
