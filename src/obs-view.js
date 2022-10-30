@@ -855,7 +855,7 @@ export default class OBSView {
               this.logger.warn(`Unable to update '${window.item}' for scene '${sceneName}': ${JSON.stringify(err)}`)
             })
             .then(() => {
-              this.scenes[sceneName].changedCams.delete(sourceName)
+              this.scenes[sceneName].changedCams.delete(window.sceneItemId)
               this.scenes[sceneName].changedWindows.delete(i - 1)
             })
         }
@@ -880,7 +880,7 @@ export default class OBSView {
           })
         })
         .catch(e => {
-          this.logger.error(`Error updating obs scene windows: ${JSON.stringify(e)}`)
+          this.logger.error(`Updating OBS scene windows: ${JSON.stringify(e)}`)
         })
 
       this.storedWindows = windows
