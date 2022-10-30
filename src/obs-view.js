@@ -348,6 +348,17 @@ export default class OBSView {
     }
   }
 
+  getSourceIdByName (sourceName, sceneName) {
+    sceneName = sceneName || this.currentScene
+    if (this.scenes[sceneName]) {
+      for (const sceneItemId in this.scenes[sceneName].sources) {
+        if (this.scenes[sceneName].sources[sceneItemId].sourceName === sourceName) {
+          return sceneItemId
+        }
+      }
+    }
+  }
+
   getNameBySourceId (sceneItemId, sceneName) {
     sceneName = sceneName || this.currentScene
 
@@ -522,7 +533,7 @@ export default class OBSView {
 
   addSourceAlias (sourceAlias, sceneItemId, sceneName) {
     if (this.scenes[sceneName]) {
-      this.scenes[sceneName].sourceAliases[sourceAlias.toLowerCase().replace(/\W/g, '-')] = sceneItemId
+      this.scenes[sceneName].sourceAliases[sourceAlias.toLowerCase().replace(/\W/g, '-')] = parseInt(sceneItemId)
     }
   }
 
@@ -543,14 +554,6 @@ export default class OBSView {
   removeAliasesForScene (sceneName) {
     if (sceneName) {
       for (const key in this.sceneAliases) if (this.sceneAliases[key] === sceneName) delete this.sceneAliases[key]
-    }
-  }
-
-  renameCams (oldId, newId, sceneName) {
-    if (sceneName && sceneName in this.scenes) {
-      for (let i = 0; i < this.scenes[sceneName].cams.length; i++) {
-        if (this.scenes[sceneName].cams[i] === oldId) this.scenes[sceneName].cams[i] = newId
-      }
     }
   }
 
@@ -587,20 +590,18 @@ export default class OBSView {
     // Source names are unique in OBS, so if you rename one, it will change the name in every scene
     if (oldName !== newName) {
       for (const sceneName in this.scenes) {
-        if (oldName in this.scenes[sceneName].sources) {
-          this.scenes[sceneName].sources[newName] = this.scenes[sceneName].sources[oldName]
-          this.scenes[sceneName].sources[newName].name = newName
-          delete this.scenes[sceneName].sources[oldName]
+        const sceneItemId = this.getSourceIdByName(oldName, sceneName)
+
+        if (sceneItemId) {
+          this.scenes[sceneName].sources[sceneItemId].sourceName = newName
+
+          // Remove old alias
+          const oldAlias = oldName.toLowerCase().replace(/\W/g, '-')
+          if (this.scenes[sceneName].sourceAliases[oldAlias]) delete this.scenes[sceneName].sourceAliases[oldAlias]
+
+          // Add new alias
+          this.addSourceAlias(newName, sceneItemId, sceneName)
         }
-
-        // Remove old aliases
-        this.removeAliasesForSource(oldName, sceneName)
-
-        // Add new aliases
-        this.addSourceAlias(newName, newName, sceneName)
-
-        // Update cams
-        this.renameCams(oldName, newName, sceneName)
       }
       this.logger.info(`Renamed source '${oldName}' to '${newName}'`)
     }
@@ -689,37 +690,8 @@ export default class OBSView {
     }
   }
 
-  sourceRenamed (data) {
-    switch (data.sourceType) {
-      case 'scene':
-        this.renameScene(data.previousName, data.newName)
-        break
-      case 'input':
-        this.renameSource(data.previousName, data.newName)
-        break
-      case 'group':
-        this.logger.info(`Renamed group '${data.sourceName}'`)
-        break
-      default: // Shouldn't get here. Warn.
-        this.logger.warn(`Renamed source '${data.sourceName}' of unknown type '${data.sourceType}'`)
-    }
-  }
-
-  sourceDestroyed (data) {
-    // Destroyed should be removed from all scenes
-    switch (data.sourceType) {
-      case 'scene':
-        this.deleteScene(data.sourceName)
-        break
-      case 'input':
-        this.logger.info(`Removed source '${data.sourceName}' from all scenes`)
-        break
-      case 'group':
-        this.logger.info(`Removed group '${data.sourceName}' from all scenes`)
-        break
-      default: // Shouldn't get here. Warn.
-        this.logger.warn(`Removed source '${data.sourceName}' of unknown type '${data.sourceType}' from all scenes`)
-    }
+  inputNameChanged (data) {
+    this.renameSource(data.oldInputName, data.inputName)
   }
 
   sceneItemRemoved (data) {
@@ -729,18 +701,6 @@ export default class OBSView {
   sceneItemCreated (data) {
     this.addSourceItem(data.sceneItemId, data.sceneName)
       .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${JSON.stringify(e)}`))
-  }
-
-  async scenesChanged (data) {
-    this.logger.debug(`Updating scenes: ${JSON.stringify(data, null, 2)}`)
-    return this.scenesRenderer.getScenes(data.scenes, this.windowKinds)
-      .then(scenes => {
-        this.scenes = scenes
-        this.sceneAliases = getSceneAliases(scenes)
-
-        this.logger.info(`OBS scenes changed: '${Object.keys(this.scenes).join('\', \'')}'`)
-      })
-      .catch(e => { this.logger.error(`Error updated scene change: ${JSON.stringify(e)}`) })
   }
 
   getSourceNameFromSceneItemId (sceneName, sceneId) {

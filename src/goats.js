@@ -238,18 +238,12 @@ class AdminStore {
   obs.on('SceneItemEnableStateChanged', data => obsView.sceneItemEnableStateChanged(data)) // hide/show source
   obs.on('SceneItemListReindexed', data => obsView.sourceOrderChanged(data))
   obs.on('CurrentProgramSceneChanged', data => obsView.switchScenes(data))
+  obs.on('SceneItemCreated', data => obsView.sceneItemCreated(data))
+  obs.on('SceneItemRemoved', data => obsView.sceneItemRemoved(data))
+  obs.on('InputNameChanged', data => obsView.inputNameChanged(data))
 
   // OBS events not implemented in obs-websocket
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
-
-  // TODO - in progress
-  obs.on('SceneItemCreated', data => obsView.sceneItemCreated(data))
-  obs.on('SceneItemRemoved', data => obsView.sceneItemRemoved(data))
-
-  // TODO - backlog
-  obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
-  obs.on('ScenesChanged', data => obsView.scenesChanged(data))
-  obs.on('SourceDestroyed', data => obsView.sourceDestroyed(data))
 
   // Connect to OBS
   app.stream.info = connectOBS(obs)
