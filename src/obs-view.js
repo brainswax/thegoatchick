@@ -554,7 +554,7 @@ export default class OBSView {
     }
   }
 
-  updateSourceWindow (sourceId, sceneName) {sceneItemId
+  updateSourceWindow (sourceId, sceneName) {
     sceneName = sceneName || this.currentScene
     const cams = this.scenes[sceneName].cams
     const windows = this.scenes[sceneName].windows
@@ -836,13 +836,13 @@ export default class OBSView {
           }
           return this.obs.call('SetSceneItemEnabled', itemEnabled)
             .catch(err => {
-              this.logger.warn(`Unable to show '${sourceName}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+              this.logger.warn(`Unable to show '${window.sceneItemId}' for scene '${sceneName}': ${JSON.stringify(err)}`)
             })
             .then(() => {
               return this.obs.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: window.sceneItemId })
             })
             .catch(err => {
-              this.logger.warn(`Unable to get the source dimensions to move '${sourceName}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+              this.logger.warn(`Unable to get the source dimensions to move '${window.sceneItemId}' for scene '${sceneName}': ${JSON.stringify(err)}`)
             })
             .then(sourceData => {
               window.sceneItemTransform.scaleX = window.sceneItemTransform.width / sourceData.sceneItemTransform.sourceWidth
