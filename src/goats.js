@@ -242,6 +242,7 @@ class AdminStore {
 
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
   obs.on('SwitchScenes', data => obsView.switchScenes(data))
+
   obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
   obs.on('SourceCreated', data => obsView.sourceCreated(data))
   obs.on('ScenesChanged', data => obsView.scenesChanged(data))

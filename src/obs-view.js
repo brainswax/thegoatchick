@@ -26,24 +26,24 @@ function getSceneAliases (scenes) {
 
 function getSourceAliases (sources) {
   const sourceAliases = {} // Needs to be an Object, not Map, in order to persist it in the object store
-  for (const sourceId in sources) sourceAliases[sources[sourceId].sourceName.toLowerCase().replace(/\W/g, '-')] = sourceId
+  for (const sourceId in sources) sourceAliases[sources[sourceId].sourceName.toLowerCase().replace(/\W/g, '-')] = parseInt(sourceId)
   return sourceAliases
 }
 
 function getSceneCams (windows) {
   const cams = []
-  windows.forEach(window => cams.push(window.sourceName))
+  windows.forEach(window => cams.push(window.sceneItemId))
   return cams
 }
 
 function getSceneWindows (scene, windowKinds) {
   const windows = []
-  for (const sourceName in scene.sources) {
-    const source = scene.sources[sourceName]
+  for (const sourceId in scene.sources) {
+    const source = scene.sources[sourceId]
 
     if (source.sceneItemEnabled && windowKinds.includes(source.inputKind)) { // Only visible media sources are treated as windows
       windows.push({
-        sourceName: source.sourceName,
+        sceneItemId: source.sceneItemId,
         x: source.sceneItemTransform.positionX,
         y: source.sceneItemTransform.positionY,
         width: source.sceneItemTransform.width,
@@ -127,7 +127,7 @@ class ScenesRenderer {
           scene.windows = getSceneWindows(scene, windowKinds)
           scene.windows.sort((a, b) => sortWindows(a, b)) // Sort the windows for cam0, cam1, etc.
           scene.cams = getSceneCams(scene.windows) // Depends on the order of the windows
-          scene.windows.forEach(window => { if (window.sourceName) delete window.sourceName }) // Don't need the name now that we have sorted the windows
+          scene.windows.forEach(window => { if (window.sceneItemId) delete window.sceneItemId }) // Don't need the name now that we have sorted the windows
           scenes[scene.sceneName] = scene
         })
     }))
@@ -390,7 +390,7 @@ export default class OBSView {
         const i = word.search(/\D/) // Find the first non-digit character
         const camName = word.slice(i) // get everything including and after the first non-digit character
         const camId = this.getSourceIdByAlias(camName, this.currentScene)
-        if (camId in this.scenes[this.currentScene].sourceAliases) { // Only add a commmand if there are aliases for the camera name
+        if (camName in this.scenes[this.currentScene].sourceAliases) { // Only add a commmand if there are aliases for the camera name
           const camIndex = i === 0 ? 0 : parseInt(word.slice(0, i)) // Assume 0 unless it starts with a number
           if (camIndex < this.scenes[this.currentScene].cams.length) { // Only add it if there's a camera window available
             commands[n++] = { index: camIndex, id: camId } // Add the command to the array
@@ -432,7 +432,9 @@ export default class OBSView {
       try {
         // get index of where the specified source is currently
         for (let x = 0; x < this.scenes[this.currentScene].cams.length; x++) {
-          if (this.scenes[this.currentScene].cams[x] === camId) currentIndex = x
+          if (this.scenes[this.currentScene].cams[x] === camId) {
+            currentIndex = x
+          }
         }
 
         if (index !== currentIndex) { // It's either not in a window or we're moving it to a different one
@@ -552,12 +554,13 @@ export default class OBSView {
     }
   }
 
-  updateSourceWindow (sourceName, sceneName) {
-    const cams = this.scenes[sceneName || this.currentScene].cams
-    const windows = this.scenes[sceneName || this.currentScene].windows
-    const source = this.scenes[sceneName || this.currentScene].sources[sourceName]
+  updateSourceWindow (sourceId, sceneName) {sceneItemId
+    sceneName = sceneName || this.currentScene
+    const cams = this.scenes[sceneName].cams
+    const windows = this.scenes[sceneName].windows
+    const source = this.scenes[sceneName].sources[sourceId]
     for (let i = 0; i < cams.length; i++) {
-      if (cams[i] === sourceName) { // Found the source in current visible cams
+      if (cams[i] === sourceId) { // Found the source in current visible cams
         windows[i].position.x = source.position.x
         windows[i].position.y = source.position.y
         if (source.width > 0) windows[i].width = source.width // Bug #84: don't set windows to width 0
@@ -669,14 +672,14 @@ export default class OBSView {
   updateSourceItem (sceneName, source) {
     // Update the source object
     if (sceneName in this.scenes) {
-      if (this.scenes[sceneName].sources[source.name] && !source.kind) source.kind = this.scenes[sceneName].sources[source.name].kind // The kind may not be in the message, but we want to keep it
-      this.scenes[sceneName].sources[source.name] = source
+      if (this.scenes[sceneName].sources[source.sceneItemId] && !source.kind) source.kind = this.scenes[sceneName].sources[source.sceneItemId].kind // The kind may not be in the message, but we want to keep it
+      this.scenes[sceneName].sources[source.sceneItemId] = source
 
       // Make sure there's an alias
-      this.addSourceAlias(source.name, source.name, sceneName)
+      this.addSourceAlias(source.sourceName, source.sceneItemId, sceneName)
 
       // If it's currently in a window, update the window dimensions
-      this.updateSourceWindow(source.name, sceneName)
+      this.updateSourceWindow(source.sceneItemId, sceneName)
 
       this.logger.info(`Updated source '${source.name}' in scene '${sceneName}'`)
       this.logger.debug(`Updated source '${source.name}' in scene '${sceneName}': ${JSON.stringify(source, null, 2)}`)
@@ -825,8 +828,7 @@ export default class OBSView {
 
       let i = 0
       Promise.all(windows.map(async window => {
-        const sourceName = this.getSourceNameFromSceneItemId(sceneName, window.sceneItemId)
-        if (this.scenes[sceneName].changedCams.has(sourceName) || this.scenes[sceneName].changedWindows.has(i++)) {
+        if (this.scenes[sceneName].changedCams.has(window.sceneItemId) || this.scenes[sceneName].changedWindows.has(i++)) {
           const itemEnabled = {
             sceneName: window.sceneName,
             sceneItemId: window.sceneItemId,
