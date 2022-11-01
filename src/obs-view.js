@@ -154,6 +154,10 @@ export default class OBSView {
     this.commands.set('reset', (...args) => this.handleResetSource(...args))
     this.commands.set('mute', (...args) => this.handleMuteSource(...args))
     this.commands.set('unmute', (...args) => this.handleUnmuteSource(...args))
+    this.commands.set('media', (...args) => this.handleMediaStatus(...args))
+    this.commands.set('play', (...args) => this.handlePlaySource(...args))
+    this.commands.set('pause', (...args) => this.handlePauseSource(...args))
+    this.commands.set('stop', (...args) => this.handleStopSource(...args))
   }
 
   /**
@@ -254,6 +258,18 @@ export default class OBSView {
     }
   }
 
+  async resetSource (sceneItemId, sceneName, delay) {
+    const sourceName = this.scenes[sceneName].sources[sceneItemId].sourceName
+    this.setSceneItemEnabled(sceneItemId, sceneName, false) // hide
+      .then(() => {
+        setTimeout(() => this.setSceneItemEnabled(sceneItemId, sceneName, true) // show
+          .then(() => { this.logger.info(`Reset source '${sourceName}' in scene '${sceneName}'`) })
+          .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${e.message}`) }),
+        delay || process.env.RESET_SOURCE_DELAY || 3000)
+      })
+      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${e.message}`) })
+  }
+
   async handleMuteSource (chat, channel, alias, value) {
     const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
     return sceneItemId && this.muteSource(sceneItemId, this.currentScene, true)
@@ -271,16 +287,64 @@ export default class OBSView {
     })
   }
 
-  async resetSource (sceneItemId, sceneName, delay) {
-    const sourceName = this.scenes[sceneName].sources[sceneItemId].sourceName
-    this.setSceneItemEnabled(sceneItemId, sceneName, false) // hide
-      .then(() => {
-        setTimeout(() => this.setSceneItemEnabled(sceneItemId, sceneName, true) // show
-          .then(() => { this.logger.info(`Reset source '${sourceName}' in scene '${sceneName}'`) })
-          .catch(e => { this.logger.error(`Unable to show source '${sourceName}' in scene '${sceneName}' for reset: ${e.message}`) }),
-        delay || process.env.RESET_SOURCE_DELAY || 3000)
+  async handleMediaStatus (chat, channel, alias, value) {
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.getMediaStatus(sceneItemId, this.currentScene)
+      .then(status => {
+        const statusMap = {
+          OBS_MEDIA_STATE_NONE: 'none',
+          OBS_MEDIA_STATE_PLAYING: 'playing',
+          OBS_MEDIA_STATE_OPENING: 'opening',
+          OBS_MEDIA_STATE_BUFFERING: 'buffering',
+          OBS_MEDIA_STATE_PAUSED: 'paused',
+          OBS_MEDIA_STATE_STOPPED: 'stopped',
+          OBS_MEDIA_STATE_ENDED: 'ended',
+          OBS_MEDIA_STATE_ERROR: 'error'
+        }
+        chat.say(channel, `${alias} media status: ${status.mediaState in statusMap ? statusMap[status.mediaState] : 'unknown'}`)
       })
-      .catch(e => { this.logger.error(`Unable to hide source '${sourceName}' in scene '${sceneName}' for reset: ${e.message}`) })
+  }
+
+  async getMediaStatus (sceneItemId, sceneName) {
+    return this.obs.call('GetMediaInputStatus', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName
+    })
+  }
+
+  async handlePlaySource (chat, channel, alias, value) {
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.playSource(sceneItemId, this.currentScene)
+  }
+
+  async playSource (sceneItemId, sceneName) {
+    return this.obs.call('TriggerMediaInputAction', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
+      mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+    })
+  }
+
+  async handlePauseSource (chat, channel, alias, value) {
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.pauseSource(sceneItemId, this.currentScene)
+  }
+
+  async pauseSource (sceneItemId, sceneName) {
+    return this.obs.call('TriggerMediaInputAction', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
+      mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
+    })
+  }
+
+  async handleStopSource (chat, channel, alias, value) {
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.stopSource(sceneItemId, this.currentScene)
+  }
+
+  async stopSource (sceneItemId, sceneName) {
+    return this.obs.call('TriggerMediaInputAction', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
+      mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP'
+    })
   }
 
   commandWindows (chat, channel, message) {
@@ -708,6 +772,14 @@ export default class OBSView {
     }
 
     return ''
+  }
+
+  mediaInputPlaybackStarted (data) {
+    this.logger.info(`Media source '${data.inputName}' started in scene '${this.currentScene}'`)
+  }
+
+  mediaInputPlaybackEnded (data) {
+    this.logger.info(`Media source '${data.inputName}' stopped in scene '${this.currentScene}'`)
   }
 
   /// //////////////////////////////////////////////////////////////////////////
