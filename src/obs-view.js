@@ -316,7 +316,7 @@ export default class OBSView {
     return this.playSource(sceneItemId, this.currentScene)
   }
 
-  async playSource(sceneItemId, sceneName) {
+  async playSource (sceneItemId, sceneName) {
     return this.obs.call('TriggerMediaInputAction', {
       inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
       mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
@@ -328,7 +328,7 @@ export default class OBSView {
     return this.pauseSource(sceneItemId, this.currentScene)
   }
 
-  async pauseSource(sceneItemId, sceneName) {
+  async pauseSource (sceneItemId, sceneName) {
     return this.obs.call('TriggerMediaInputAction', {
       inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
       mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
@@ -340,7 +340,7 @@ export default class OBSView {
     return this.stopSource(sceneItemId, this.currentScene)
   }
 
-  async stopSource(sceneItemId, sceneName) {
+  async stopSource (sceneItemId, sceneName) {
     return this.obs.call('TriggerMediaInputAction', {
       inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
       mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP'
