@@ -312,15 +312,39 @@ export default class OBSView {
   }
 
   async handlePlaySource (chat, channel, alias, value) {
-    this.logger.log(`TODO: implement playing source media`)
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.playSource(sceneItemId, this.currentScene)
+  }
+
+  async playSource(sceneItemId, sceneName) {
+    return this.obs.call('TriggerMediaInputAction', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
+      mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+    })
   }
 
   async handlePauseSource (chat, channel, alias, value) {
-    this.logger.log(`TODO: implement pausing source media`)
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.pauseSource(sceneItemId, this.currentScene)
+  }
+
+  async pauseSource(sceneItemId, sceneName) {
+    return this.obs.call('TriggerMediaInputAction', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
+      mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
+    })
   }
 
   async handleStopSource (chat, channel, alias, value) {
-    this.logger.log(`TODO: implement stopping source media`)
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.stopSource(sceneItemId, this.currentScene)
+  }
+
+  async stopSource(sceneItemId, sceneName) {
+    return this.obs.call('TriggerMediaInputAction', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
+      mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP'
+    })
   }
 
   commandWindows (chat, channel, message) {
