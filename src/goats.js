@@ -192,12 +192,22 @@ class AdminStore {
 
   async function connectOBS (obs) {
     logger.info(`== connecting to OBS host:${process.env.OBS_ADDRESS}, hash: ${crypto.createHash('sha256').update(process.env.OBS_PASSWORD).digest('base64')}`)
-    return obs.connect({ address: process.env.OBS_ADDRESS, password: process.env.OBS_PASSWORD })
+    return obs.connect('ws://' + process.env.OBS_ADDRESS, process.env.OBS_PASSWORD)
       .then(() => {
         app.obs.retries = 0 // Reset for the next disconnect
         logger.info('== connected to OBS')
+
+        return obsView.syncFromObs()
       })
-      .then(() => obsView.syncFromObs())
+      .then(() => {
+        return obs.call('GetVideoSettings')
+      })
+      .then(info => {
+        // Need the info to get the stream resolution
+        logger.info(`Stream Base Resolution: ${info.baseWidth}x${info.baseHeight}, Output Resolution: ${info.outputWidth}x${info.outputHeight}`)
+        logger.debug(`Video Info: ${JSON.stringify(info, null, 2)}`)
+        return info
+      })
   }
 
   function reconnectOBS () {
@@ -206,19 +216,15 @@ class AdminStore {
       const delay = Math.round((process.env.OBS_RETRY_DELAY || 3000) * ((process.env.OBS_RETRY_DECAY || 1.2) ** app.obs.retries++))
       logger.info(`OBS reconnect delay: ${delay / 1000} seconds, retries: ${app.obs.retries}`)
       setTimeout(() => {
-        connectOBS(obs)
-          .then(() => obs.send('GetVideoInfo'))
-          .then((info) => {
-            // Need the info to get the stream resolution
-            app.stream.info = info
-            logger.info(`Stream Base Resolution: ${app.stream.info.baseWidth}x${app.stream.info.baseHeight}, Output Resolution: ${app.stream.info.outputWidth}x${app.stream.info.outputHeight}`)
-            logger.debug(`Video Info: ${JSON.stringify(info, null, 2)}`)
+        app.stream.info = connectOBS(obs)
+          .catch(e => {
+            logger.error(`Connection retry to OBS failed: ${e.message}`)
           })
-          .catch(e => logger.error(`Connect OBS retry failed: ${e.error}`))
       }, delay)
     }
   }
 
+  // Connect/auth events
   obs.on('ConnectionOpened', () => { logger.info('== OBS connection opened') })
   obs.on('ConnectionClosed', () => {
     logger.info('== OBS connection closed')
@@ -226,20 +232,24 @@ class AdminStore {
   })
   obs.on('AuthenticationSuccess', () => { logger.info('== OBS successfully authenticated') })
   obs.on('AuthenticationFailure', () => { logger.info('== OBS failed authentication') })
-  obs.on('SceneItemVisibilityChanged', data => obsView.sceneItemVisibilityChanged(data))
-  obs.on('SourceOrderChanged', data => obsView.sourceOrderChanged(data))
+  obs.on('error', e => logger.error(`== OBS error: ${e.message}`))
+
+  // OBS events - working
+  obs.on('SceneItemEnableStateChanged', data => obsView.sceneItemEnableStateChanged(data)) // hide/show source
+  obs.on('SceneItemListReindexed', data => obsView.sourceOrderChanged(data))
+  obs.on('CurrentProgramSceneChanged', data => obsView.switchScenes(data))
+  obs.on('SceneItemCreated', data => obsView.sceneItemCreated(data))
+  obs.on('SceneItemRemoved', data => obsView.sceneItemRemoved(data))
+  obs.on('InputNameChanged', data => obsView.inputNameChanged(data))
+
+  // OBS events not implemented in obs-websocket
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))
-  obs.on('SwitchScenes', data => obsView.switchScenes(data))
-  obs.on('SourceRenamed', data => obsView.sourceRenamed(data))
-  obs.on('SourceCreated', data => obsView.sourceCreated(data))
-  obs.on('ScenesChanged', data => obsView.scenesChanged(data))
-  obs.on('SourceDestroyed', data => obsView.sourceDestroyed(data))
-  obs.on('SceneItemRemoved', data => obsView.sourceItemRemoved(data))
-  obs.on('error', err => logger.error(`== OBS error: ${JSON.stringify(err)}`))
 
   // Connect to OBS
-  connectOBS(obs)
-    .catch(e => logger.error(`Connect OBS failed: ${e.error}`))
+  app.stream.info = connectOBS(obs)
+    .catch(e => {
+      logger.error(`Connect OBS failed: ${e.message}`)
+    })
 
   // ///////////////////////////////////////////////////////////////////////////
   // Connect to twitch
@@ -297,7 +307,9 @@ class AdminStore {
 
       chatBot(context, msg) // Process chat commands
       linkit(context, msg) // Send any links to slack
-    } catch (e) { logger.error(`Error processing chat: ${JSON.stringify(e)}, context: ${JSON.stringify(context)}`) }
+    } catch (e) {
+      logger.error(`processing chat: ${JSON.stringify(e)}, context: ${JSON.stringify(context)}`)
+    }
   }
   // Called every time the bot connects to Twitch chat:
   function onConnectedHandler (addr, port) {
@@ -433,7 +445,7 @@ class AdminStore {
           break
         case '!mute':
           if (isModerator(context)) {
-            obs.send('SetMute', { source: 'Audio', mute: true })
+            obs.call('SetMute', { source: 'Audio', mute: true })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream muted'))
               .catch(e => {
                 logger.error(`Unable to mute: ${JSON.stringify(e, null, 2)}`)
@@ -443,7 +455,7 @@ class AdminStore {
           break
         case '!unmute':
           if (isModerator(context)) {
-            obs.send('SetMute', { source: 'Audio', mute: false })
+            obs.call('SetMute', { source: 'Audio', mute: false })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream unmuted'))
               .catch(e => {
                 logger.error(`Unable to unmute: ${JSON.stringify(e, null, 2)}`)
@@ -460,7 +472,7 @@ class AdminStore {
           break
         case '!stop':
           if (isModerator(context)) {
-            obs.send('StopStreaming')
+            obs.call('StopStream')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped'))
               .catch(e => {
                 logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, 2)}`)
@@ -470,7 +482,7 @@ class AdminStore {
           break
         case '!start':
           if (isModerator(context)) {
-            obs.send('StartStreaming')
+            obs.call('StartStream')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream started'))
               .catch(e => {
                 logger.error(`Unable to start OBS: ${JSON.stringify(e, null, 2)}`)
@@ -480,16 +492,11 @@ class AdminStore {
           break
         case '!restart':
           if (isModerator(context)) {
-            obs.send('StopStreaming')
+            obs.call('StopStream')
               .then(() => {
-                chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped. Starting in...')
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':Z Five') }, 5000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':\\ Four') }, 6000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ';p Three') }, 7000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':) Two') }, 8000)
-                setTimeout(function () { chat.say(process.env.TWITCH_CHANNEL, ':D One') }, 9000)
+                chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped. Restarting in 10 seconds...')
                 setTimeout(function () {
-                  obs.send('StartStreaming')
+                  obs.call('StartStream')
                     .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream restarted'))
                     .catch(e => {
                       logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, 2)}`)
