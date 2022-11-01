@@ -241,6 +241,8 @@ class AdminStore {
   obs.on('SceneItemCreated', data => obsView.sceneItemCreated(data))
   obs.on('SceneItemRemoved', data => obsView.sceneItemRemoved(data))
   obs.on('InputNameChanged', data => obsView.inputNameChanged(data))
+  obs.on('MediaInputPlaybackStarted', data => obsView.mediaInputPlaybackStarted(data))
+  obs.on('MediaInputPlaybackEnded', data => obsView.mediaInputPlaybackEnded(data))
 
   // OBS events not implemented in obs-websocket
   obs.on('SceneItemTransformChanged', data => obsView.sceneItemTransformChanged(data))

@@ -774,6 +774,14 @@ export default class OBSView {
     return ''
   }
 
+  mediaInputPlaybackStarted (data) {
+    this.logger.info(`Media source '${data.inputName}' started in scene '${this.currentScene}'`)
+  }
+
+  mediaInputPlaybackEnded (data) {
+    this.logger.info(`Media source '${data.inputName}' stopped in scene '${this.currentScene}'`)
+  }
+
   /// //////////////////////////////////////////////////////////////////////////
 
   /**
