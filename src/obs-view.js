@@ -288,7 +288,27 @@ export default class OBSView {
   }
 
   async handleMediaStatus (chat, channel, alias, value) {
-    this.logger.log(`TODO: implement getting media status`)
+    const sceneItemId = this.getSourceIdByAlias(alias, this.currentScene)
+    return this.getMediaStatus(sceneItemId, this.currentScene)
+      .then(status => {
+        const statusMap = {
+          OBS_MEDIA_STATE_NONE: 'none',
+          OBS_MEDIA_STATE_PLAYING: 'playing',
+          OBS_MEDIA_STATE_OPENING: 'opening',
+          OBS_MEDIA_STATE_BUFFERING: 'buffering',
+          OBS_MEDIA_STATE_PAUSED: 'paused',
+          OBS_MEDIA_STATE_STOPPED: 'stopped',
+          OBS_MEDIA_STATE_ENDED: 'ended',
+          OBS_MEDIA_STATE_ERROR: 'error'
+        }
+        chat.say(channel, `${alias} media status: ${status.mediaState in statusMap ? statusMap[status.mediaState] : 'unknown'}`)
+      })
+  }
+
+  async getMediaStatus (sceneItemId, sceneName) {
+    return this.obs.call('GetMediaInputStatus', {
+      inputName: this.scenes[sceneName].sources[sceneItemId].sourceName
+    })
   }
 
   async handlePlaySource (chat, channel, alias, value) {
