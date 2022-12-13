@@ -158,6 +158,7 @@ export default class OBSView {
     this.commands.set('play', (...args) => this.handlePlaySource(...args))
     this.commands.set('pause', (...args) => this.handlePauseSource(...args))
     this.commands.set('stop', (...args) => this.handleStopSource(...args))
+    this.commands.set('sound', (...args) => this.handleSoundInfo(...args))
   }
 
   /**
@@ -221,6 +222,16 @@ export default class OBSView {
       chat.say(channel, `${alias} source w:${source.sceneItemTransform.sourceWidth} h:${source.sceneItemTransform.sourceHeight}`)
     } else {
       this.logger.info(`No source info for '${alias}'`)
+    }
+  }
+
+  async handleSoundInfo (chat, channel, alias, value) {
+    const source = this.getSourceByAlias(alias)
+    if (source) {
+      return this.getInputSettings(source.sourceName)
+        .then(settings => {
+          this.logger.log(`Got input settings for ${alias}`)
+        })
     }
   }
 
@@ -345,6 +356,14 @@ export default class OBSView {
       inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
       mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP'
     })
+  }
+
+  async getInputSettings (inputName) {
+    return this.obs.call('GetInputSettings', { inputName: inputName })
+  }
+
+  async getInputMute (inputName) {
+    return this.obs.call('GetInputMute', { inputName: inputName })
   }
 
   commandWindows (chat, channel, message) {
@@ -801,6 +820,9 @@ export default class OBSView {
             this.logger.info(`Synced scenes from OBS: '${Object.keys(this.scenes).join('\', \'')}'`)
           })
           .catch(e => { this.logger.error(`Error syncing scenes from OBS: ${e.message}`) })
+      })
+      .then(() => {
+        return this.getInputList(this.currentScene)
       })
   }
 
