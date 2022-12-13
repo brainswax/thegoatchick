@@ -450,7 +450,7 @@ class AdminStore {
             obs.call('SetMute', { source: 'Audio', mute: true })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream muted'))
               .catch(e => {
-                logger.error(`Unable to mute: ${JSON.stringify(e, null, 2)}`)
+                logger.error(`Unable to mute: ${e.message}`)
                 chat.say(process.env.TWITCH_CHANNEL, 'Unable to mute the stream!')
               })
           }
@@ -460,7 +460,7 @@ class AdminStore {
             obs.call('SetMute', { source: 'Audio', mute: false })
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream unmuted'))
               .catch(e => {
-                logger.error(`Unable to unmute: ${JSON.stringify(e, null, 2)}`)
+                logger.error(`Unable to unmute: ${e.message}`)
                 chat.say(process.env.TWITCH_CHANNEL, 'Unable to unmute the stream!')
               })
           }
@@ -477,8 +477,8 @@ class AdminStore {
             obs.call('StopStream')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream stopped'))
               .catch(e => {
-                logger.error(`Unable to stop OBS: ${JSON.stringify(e, null, 2)}`)
-                chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... unable to stop the stream')
+                logger.error(`Unable to stop OBS: ${e.message}`)
+                chat.say(process.env.TWITCH_CHANNEL, `Something went wrong (${e.message})... unable to stop the stream`)
               })
           }
           break
@@ -487,8 +487,8 @@ class AdminStore {
             obs.call('StartStream')
               .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream started'))
               .catch(e => {
-                logger.error(`Unable to start OBS: ${JSON.stringify(e, null, 2)}`)
-                chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... unable to start the stream')
+                logger.error(`Unable to start OBS: ${e.message}`)
+                chat.say(process.env.TWITCH_CHANNEL, `Something went wrong (${e.message})... unable to start the stream`)
               })
           }
           break
@@ -501,13 +501,13 @@ class AdminStore {
                   obs.call('StartStream')
                     .then(() => chat.say(process.env.TWITCH_CHANNEL, 'Stream restarted'))
                     .catch(e => {
-                      logger.error(`Unable to start OBS after a restart: ${JSON.stringify(e, null, 2)}`)
+                      logger.error(`Unable to start OBS after a restart: ${e.message}`)
                       chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... unable to restart the stream')
                     })
                 }, 10000)
               })
               .catch(e => {
-                logger.error(`Unable to stop OBS for a restart: ${JSON.stringify(e, null, 2)}`)
+                logger.error(`Unable to stop OBS for a restart: ${e.message}`)
                 chat.say(process.env.TWITCH_CHANNEL, 'Something went wrong... the stream won\'t stop.')
               })
           }

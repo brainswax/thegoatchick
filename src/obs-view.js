@@ -780,7 +780,7 @@ export default class OBSView {
 
   sceneItemCreated (data) {
     this.addSourceItem(data.sceneItemId, data.sceneName)
-      .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${JSON.stringify(e)}`))
+      .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${e.message}`))
   }
 
   getSourceNameFromSceneItemId (sceneName, sceneId) {
