@@ -366,6 +366,14 @@ export default class OBSView {
     return this.obs.call('GetInputMute', { inputName: inputName })
   }
 
+  saveScene(sceneName) {
+    //TODO: save the current windows and sources to restore in a !scene load
+  }
+
+  loadScene(sceneName) {
+    //TODO: load all the windows and sources from a previous !scene save
+  }
+
   commandWindows (chat, channel, message) {
     this.logger.debug(`OBS Sources: ${JSON.stringify(this.scenes[this.currentScene].sources, null, 2)}`)
     this.logger.debug(`Filtered sources: ${JSON.stringify(this.getSources(this.windowKinds), null, 2)}`)
