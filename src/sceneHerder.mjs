@@ -7,6 +7,8 @@ export default class SceneHerder extends Herder {
     this.commands.set('', (...args) => this.showScenes(...args))
     this.commands.set('info', (...args) => this.showInfo(...args))
     this.commands.set('i', (...args) => this.showInfo(...args))
+    this.commands.set('save', (...args) => this.saveScene(...args))
+    this.commands.set('load', (...args) => this.loadScene(...args))
   }
 
   herd (cmd, str) {
@@ -18,5 +20,13 @@ export default class SceneHerder extends Herder {
     else {
       this.obsView.setCurrentScene(cmd)
     }
+  }
+
+  saveScene (name, cmd) {
+    this.obsView.saveScene()
+  }
+
+  loadScene (name, cmd) {
+    this.obsView.loadScene()
   }
 }

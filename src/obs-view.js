@@ -158,6 +158,7 @@ export default class OBSView {
     this.commands.set('play', (...args) => this.handlePlaySource(...args))
     this.commands.set('pause', (...args) => this.handlePauseSource(...args))
     this.commands.set('stop', (...args) => this.handleStopSource(...args))
+    this.commands.set('sound', (...args) => this.handleSoundInfo(...args))
   }
 
   /**
@@ -221,6 +222,16 @@ export default class OBSView {
       chat.say(channel, `${alias} source w:${source.sceneItemTransform.sourceWidth} h:${source.sceneItemTransform.sourceHeight}`)
     } else {
       this.logger.info(`No source info for '${alias}'`)
+    }
+  }
+
+  async handleSoundInfo (chat, channel, alias, value) {
+    const source = this.getSourceByAlias(alias)
+    if (source) {
+      return this.getInputSettings(source.sourceName)
+        .then(settings => {
+          this.logger.log(`Got input settings for ${alias}`)
+        })
     }
   }
 
@@ -345,6 +356,22 @@ export default class OBSView {
       inputName: this.scenes[sceneName].sources[sceneItemId].sourceName,
       mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP'
     })
+  }
+
+  async getInputSettings (inputName) {
+    return this.obs.call('GetInputSettings', { inputName: inputName })
+  }
+
+  async getInputMute (inputName) {
+    return this.obs.call('GetInputMute', { inputName: inputName })
+  }
+
+  saveScene(sceneName) {
+    //TODO: save the current windows and sources to restore in a !scene load
+  }
+
+  loadScene(sceneName) {
+    //TODO: load all the windows and sources from a previous !scene save
   }
 
   commandWindows (chat, channel, message) {
@@ -761,7 +788,7 @@ export default class OBSView {
 
   sceneItemCreated (data) {
     this.addSourceItem(data.sceneItemId, data.sceneName)
-      .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${JSON.stringify(e)}`))
+      .catch(e => this.logger.error(`Unable to add new source '${data.sourceName}' for scene '${this.currentScene}': ${e.message}`))
   }
 
   getSourceNameFromSceneItemId (sceneName, sceneId) {
@@ -801,6 +828,9 @@ export default class OBSView {
             this.logger.info(`Synced scenes from OBS: '${Object.keys(this.scenes).join('\', \'')}'`)
           })
           .catch(e => { this.logger.error(`Error syncing scenes from OBS: ${e.message}`) })
+      })
+      .then(() => {
+        return this.getInputList(this.currentScene)
       })
   }
 

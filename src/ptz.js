@@ -290,7 +290,7 @@ export default class PTZ {
 
   showShortcut (shortcut) {
     if (!shortcut || shortcut === '*') {
-      const snames = Object.keys(this.data.shortcuts)
+      const snames = Object.keys(this.data.shortcuts).sort()
       if (snames.length === 0) this.chat.say(this.channel, `There are no shortcuts for ${this.name}`)
       else this.chat.say(this.channel, `${this.name} shortcuts: ${snames.join(', ')}`)
     } else if (this.data.shortcuts[shortcut]) {
