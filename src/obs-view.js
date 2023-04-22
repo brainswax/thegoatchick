@@ -232,7 +232,7 @@ export default class OBSView {
     }
     return this.obs.call('SetSceneItemEnabled', item)
       .catch(e => {
-        this.logger.warn(`Unable to ${enabled ? 'show' : 'hide'} source '${this.getNameBySourceId(sceneItemId, sceneName)}' in scene '${sceneItemId}': ${e.error}`)
+        this.logger.warn(`Unable to ${enabled ? 'show' : 'hide'} source '${this.getNameBySourceId(sceneItemId, sceneName)}' in scene '${sceneName}': ${e.error}`)
       })
   }
 
@@ -830,17 +830,22 @@ export default class OBSView {
           }
           return this.obs.call('SetSceneItemEnabled', itemEnabled)
             .catch(err => {
-              this.logger.warn(`Unable to show '${window.sceneItemId}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+              this.logger.warn(`Unable to show '${this.getNameBySourceId(window.sceneItemId, window.sceneName)}' for scene '${sceneName}': ${JSON.stringify(err)}`)
             })
             .then(() => {
               return this.obs.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: window.sceneItemId })
             })
             .catch(err => {
-              this.logger.warn(`Unable to get the source dimensions to move '${window.sceneItemId}' for scene '${sceneName}': ${JSON.stringify(err)}`)
+              this.logger.warn(`Unable to get the source dimensions to move '${this.getNameBySourceId(window.sceneItemId, window.sceneName)}' for scene '${sceneName}': ${JSON.stringify(err)}`)
             })
             .then(sourceData => {
-              window.sceneItemTransform.scaleX = window.sceneItemTransform.width / sourceData.sceneItemTransform.sourceWidth
-              window.sceneItemTransform.scaleY = window.sceneItemTransform.height / sourceData.sceneItemTransform.sourceHeight
+              const x = window.sceneItemTransform.width / sourceData.sceneItemTransform.sourceWidth
+              const y = window.sceneItemTransform.height / sourceData.sceneItemTransform.sourceHeight
+
+              // If the cam freezes, the size gets set to 0, which messes up the camera ordering. Just ignore when it's set to 0.
+              if (x === 0 || y === 0) { this.logger.info(`Ingoring window update for source: ${this.getNameBySourceId(window.sceneItemId, window.sceneName)}`) }
+              if (x !== 0) { window.sceneItemTransform.scaleX = x }
+              if (y !== 0) { window.sceneItemTransform.scaleY = y }
             })
             .then(() => {
               return this.obs.call('SetSceneItemTransform', window)
