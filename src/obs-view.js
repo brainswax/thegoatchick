@@ -66,7 +66,7 @@ function getWindowsFromScene (scene) {
 
         windows.push({
           sceneName: scene.sceneName,
-          sceneItemId: sceneItemId,
+          sceneItemId,
           sceneItemTransform: {
             positionX: window.x,
             positionY: window.y,
@@ -88,7 +88,7 @@ class ScenesRenderer {
   }
 
   async getSceneItemList (sceneName) {
-    return this.obs.call('GetSceneItemList', { sceneName: sceneName })
+    return this.obs.call('GetSceneItemList', { sceneName })
   }
 
   async getSceneSources (sceneName) {
@@ -105,7 +105,7 @@ class ScenesRenderer {
 
   async getScene (sceneName) {
     const scene = {
-      sceneName: sceneName,
+      sceneName,
       changedCams: new Set(),
       changedWindows: new Set()
     }
@@ -226,8 +226,8 @@ export default class OBSView {
 
   async setSceneItemEnabled (sceneItemId, sceneName, enabled = true) {
     const item = {
-      sceneName: sceneName,
-      sceneItemId: sceneItemId,
+      sceneName,
+      sceneItemId,
       sceneItemEnabled: enabled
     }
     return this.obs.call('SetSceneItemEnabled', item)
@@ -675,7 +675,7 @@ export default class OBSView {
   setCurrentScene (sceneAlias) {
     const sceneName = this.sceneAliases[sceneAlias]
     if (sceneName) {
-      return this.obs.call('SetCurrentProgramScene', { sceneName: sceneName })
+      return this.obs.call('SetCurrentProgramScene', { sceneName })
         .catch(e => { this.logger.error(`OBS error switching scenes: ${JSON.stringify(e, null, 2)}`) })
     }
   }
@@ -833,7 +833,7 @@ export default class OBSView {
               this.logger.warn(`Unable to show '${this.getNameBySourceId(window.sceneItemId, window.sceneName)}' for scene '${sceneName}': ${JSON.stringify(err)}`)
             })
             .then(() => {
-              return this.obs.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: window.sceneItemId })
+              return this.obs.call('GetSceneItemTransform', { sceneName, sceneItemId: window.sceneItemId })
             })
             .catch(err => {
               this.logger.warn(`Unable to get the source dimensions to move '${this.getNameBySourceId(window.sceneItemId, window.sceneName)}' for scene '${sceneName}': ${JSON.stringify(err)}`)
@@ -864,7 +864,7 @@ export default class OBSView {
           this.scenes[sceneName].changedCams.forEach(cam => {
             if (!this.scenes[sceneName].cams.includes(cam)) {
               const itemDisabled = {
-                sceneName: sceneName,
+                sceneName,
                 sceneItemId: cam,
                 sceneItemEnabled: false
               }

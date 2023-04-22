@@ -163,12 +163,12 @@ class AdminStore {
   logger.log(`== log levels: { console: ${logger.getLogLevel(logger.level.console)}, slack: ${logger.getLogLevel(logger.level.slack)} }`)
 
   // Open and initialize the sqlite database for storing object states across restarts
-  const db = new Stojo({ logger: logger, file: process.env.DB_FILE })
+  const db = new Stojo({ logger, file: process.env.DB_FILE })
   app.shutdown.push(() => {
     logger.info('== Shutting down the local database...')
     db.close()
   })
-  const adminStore = new AdminStore({ logger: logger, db: db })
+  const adminStore = new AdminStore({ logger, db })
   app.admins = await adminStore.admins // load from store first
 
   if (app.admins.size === 0) { // if nothing in the store, load from the app config
@@ -184,10 +184,10 @@ class AdminStore {
     obs.disconnect()
   })
   const obsView = new OBSView({
-    obs: obs,
-    db: db,
+    obs,
+    db,
     windowKinds: app.config.windows.sourceKinds,
-    logger: logger
+    logger
   })
 
   async function connectOBS (obs) {
@@ -277,12 +277,12 @@ class AdminStore {
 
   // ///////////////////////////////////////////////////////////////////////////
   // Load the PTZ cameras
-  await initCams(app.ptz.cams, app.ptz.names, process.env.PTZ_CONFIG, 'cams', { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
+  await initCams(app.ptz.cams, app.ptz.names, process.env.PTZ_CONFIG, 'cams', { chat, channel: process.env.TWITCH_CHANNEL, logger, db })
     .then(() => logger.info('== loaded PTZ cameras'))
     .catch(err => logger.error(`== error loading PTZ cameras: ${err}`))
 
   // Load any non-PTZ network cameras
-  await initCams(app.ipcams.cams, app.ipcams.names, process.env.PTZ_CONFIG, 'static', { chat: chat, channel: process.env.TWITCH_CHANNEL, logger: logger, db: db })
+  await initCams(app.ipcams.cams, app.ipcams.names, process.env.PTZ_CONFIG, 'static', { chat, channel: process.env.TWITCH_CHANNEL, logger, db })
     .then(() => logger.info('== loaded IP cameras'))
     .catch(err => logger.error(`== error loading IP cameras: ${err}`))
 
@@ -293,7 +293,7 @@ class AdminStore {
     .catch(err => logger.error(`Unable to connect to twitch: ${JSON.stringify(err, null, 2)}`))
 
   function onCheerHandler (target, context, msg) {
-    logger.debug(`Cheer: ${JSON.stringify({ target: target, msg: msg, context: context }, null, 2)}`)
+    logger.debug(`Cheer: ${JSON.stringify({ target, msg, context }, null, 2)}`)
 
     // Automatically show the 'treat' camera at the 'cheer' shortcut if it's not already shown
     if (!obsView.inView('treat')) obsView.processChat('1treat')
@@ -327,12 +327,12 @@ class AdminStore {
   // This will process !camN commands to view and manage windows for cams/views
   {
     const options = {
-      logger: logger,
+      logger,
       twitch: {
-        chat: chat,
+        chat,
         channel: process.env.TWITCH_CHANNEL
       },
-      obsView: obsView
+      obsView
     }
     app.windowHerder = new WindowHerder(options)
     app.sceneHerder = new SceneHerder(options)
