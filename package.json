@@ -6,7 +6,8 @@
     "lint": "standard",
     "test": "standard && cross-env NODE_OPTIONS=--experimental-vm-modules jest --verbose",
     "start": "cross-env NODE_ENV=production nodemon -r esm --experimental-vm-modules src/goats.js",
-    "debug": "cross-env NODE_ENV=development nodemon -r esm --experimental-vm-modules --inspect src/goats.js"
+    "debug": "cross-env NODE_ENV=development nodemon -r esm --experimental-vm-modules --inspect src/goats.js",
+    "build": "exec sudo docker build . -t brainswax/thegoatchick:$npm_package_version"
   },
   "repository": {
     "type": "git",
