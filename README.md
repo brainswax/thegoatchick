@@ -3,6 +3,74 @@ Camera control for https://www.twitch.tv/thegoatchick
 
 Originally based off [twitch-goat-cams](https://github.com/spencerlambert/twitch-goat-cams) developed by Farmer Spencer
 
+# Installation
+
+## Install from Docker
+### Install Docker
+1. Install [docker](https://www.docker.com) 
+1. Get the container from DockerHub:
+  ```shell
+  docker pull brainswax/thegoatchick:2.1.1
+  ```
+### Configuration
+If this is a new installation:
+1. Create a folder on your local machine where you want to store the config files
+1. Create (or copy) the following files into the config folder:
+  * .env
+  * goats.json
+  * ptz.json
+
+Example .env:
+```shell
+SLACK_HOOK=<token obtained from slack>
+SLACK_LOG=true
+GO_LIVE=true
+
+OBS_ADDRESS=<IP address of the OBS machine>:4455
+OBS_PASSWORD=<password from OBS>
+
+PTZ_CONFIG=/appdata/ptz.json
+APP_CONFIG=/appdata/goats.json
+
+TWITCH_USER=<your twitch username>
+TWITCH_CHANNEL=<typically the same as your username>
+TWITCH_TOKEN=oath:<your twitch token>
+```
+Example goats.json:
+```json
+{
+  "ignore": ["StreamElements"]
+}
+```
+Example ptz.json with 2 cameras:
+```json
+{
+  "cams": {
+    "yard": {
+      "hostname": "<IP address of the yard camera",
+      "username": "<user configured in the yard camera config>"
+      "password": "<users password>"
+    },
+    "parlor": {
+      "hostname": "<IP address of the parlor camera",
+      "username": "<user configured in the parlor camera config>"
+      "password": "<users password>"
+    }
+  }
+}
+```
+
+
+### Run the Container
+From Docker Desktop:
+1. Go to Images and select to Run the container
+1. Expand "Optional settings" in the popup
+1. Under Volumes, add:
+  * Host path: select the configuration folder from above
+  * Container path: /app
+
+Click Run!
+
 # Configuration
 The configuration consists of environment variables and configuration files located in the conf/ directory
 
