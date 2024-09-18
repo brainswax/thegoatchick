@@ -67,7 +67,7 @@ From Docker Desktop:
 1. Expand "Optional settings" in the popup
 1. Under Volumes, add:
   * Host path: select the configuration folder from above
-  * Container path: /app
+  * Container path: /appdata
 
 Click Run!
 
