@@ -1,23 +1,12 @@
-# Import the base image
-FROM node:16-alpine
+# Node 24 is the current Maintenance LTS. The app needs Node >= 22.13 for node:sqlite.
+FROM node:24-alpine
 
-# Working directory
 WORKDIR /app
 
-# Copy the source code
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
 COPY . .
-
-# Install linux dependencies
-ENV PYTHONUNBUFFERED=1
-RUN apk add --update --no-cache make gcc musl g++
-RUN apk add python3 --update --no-cache && ln -sf python3 /usr/bin/python
-#   && python3 -m ensurepip && pip3 install --no-cache --upgrade pip setuptools
-
-# Install npm dependencies
-RUN npm install -g nodemon
-RUN npm install
-# If you are building your code for production
-# RUN npm ci --only=production
 
 # Point the .env file to /appdata/
 RUN ln -s /appdata/.env /app/.env
@@ -25,5 +14,4 @@ RUN ln -s /appdata/.env /app/.env
 # Make the checkhash script executable
 RUN chmod 755 util/checkhash
 
-# Run the app
 CMD ["npm", "start"]

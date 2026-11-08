@@ -1,15 +1,30 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
 import OBSView from './obs-view.js'
 import PTZ from './ptz.js'
 import { triggerRestart } from './autostart.mjs'
-import { Stojo } from '@codegrill/stojo'
+import { Stojo } from './stojo.mjs'
 import { logger } from './slacker.mjs'
 import * as cenv from 'custom-env'
 import crypto from 'crypto'
 import WindowHerder from './windowHerder.mjs'
 import SceneHerder from './sceneHerder.mjs'
 import linkit from './linkit.mjs'
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+
+function resolveConfig (file) {
+  return path.isAbsolute(file) ? file : path.resolve(moduleDir, file)
+}
+
+async function loadJson (file) {
+  const target = file instanceof URL ? file : resolveConfig(file)
+  const text = await fs.readFile(target, 'utf8')
+  return { default: JSON.parse(text) }
+}
 
 cenv.env(process.env.NODE_ENV)
 
@@ -32,7 +47,7 @@ logger.level.slack = logger[process.env.LOG_LEVEL_SLACK] || logger.level.slack
  * @returns an empty promise
  */
 async function initCams (map, names, configFile, element, options = {}) {
-  return import(configFile)
+  return loadJson(configFile)
     .catch(e => { logger.error(`Unable to import '${configFile}': ${e}`) })
     .then(conf => {
       // Grab the appropriate entry from the config file
@@ -141,7 +156,7 @@ class AdminStore {
     return context.badges && context.badges.broadcaster
   }
 
-  await import(process.env.APP_CONFIG)
+  await loadJson(process.env.APP_CONFIG)
     .then(config => {
       if (config && config.default) {
         logger.debug(`Loaded app config: ${JSON.stringify(config)}`)
@@ -155,7 +170,7 @@ class AdminStore {
     .catch(e => logger.warn(`Unable to load config ${process.env.APP_CONFIG}: ${e}`))
 
   // Grab the version and log it
-  await import('../package.json')
+  await loadJson(new URL('../package.json', import.meta.url))
     .then(pkg => { logger.log(`== starting ${pkg.default.name}@${pkg.default.version}`) })
     .catch(e => { logger.error(`Unable to open package information: ${e}`) })
 

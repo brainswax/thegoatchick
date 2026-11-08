@@ -1,4 +1,4 @@
-import { Stojo } from '@codegrill/stojo'
+import { Stojo } from './stojo.mjs'
 
 function sortWindows (a, b) {
   const fudge = process.env.CAM_FUDGE ? +(process.env.CAM_FUDGE) : 0.8

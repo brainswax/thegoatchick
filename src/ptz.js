@@ -1,5 +1,5 @@
 import { Cam } from 'onvif'
-import { Stojo } from '@codegrill/stojo'
+import { Stojo } from './stojo.mjs'
 import crypto from 'crypto'
 
 const panRegex = /(p|pan|right|left|r|l) ?(\+|-)? ?([0-9]{1,3})/m
